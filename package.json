@@ -1,0 +1,17 @@
+{
+  "name": "kvass",
+  "version": "1.0.0",
+  "description": "",
+  "main": "test.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "asterisk.io": "^0.1.1",
+    "config": "^1.26.1",
+    "pg": "^7.0.2",
+    "winston": "^2.3.1"
+  }
+}

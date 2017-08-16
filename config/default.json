@@ -1,0 +1,18 @@
+{
+    "app": {
+        "debug": true,
+        "production": false
+    },
+    "db": {
+        "user": "domovenok",
+        "password": "domovenokPG",
+        "database": "kvass",
+        "host": "localhost"
+    },
+    "ami":{
+        "host": "192.168.1.15",
+        "login": "amidom",
+        "password": "MNiun2u3i4nBVgh23456-z0",
+        "port": 5038
+    }
+}
