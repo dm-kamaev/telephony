@@ -24,7 +24,6 @@ const EXTENSION_STATUS = {
 }
 
 const LOCK_TYPE = {'AFK': '101', '1C_LOCK': '102', 'FILLING_ORDER': '103'}
-const DIAL_UNLOCK_TYPE = ['AFK', '1C_LOCK']
 
 class ExtensionCollection {
     constructor(){
@@ -47,8 +46,8 @@ class ExtensionCollection {
         if (extension){
             systemLog.info(`Reload ${extension}`)
             extension.default_trunk = extension.get_default_trunk()
-            await extension.setStatus(status)
             extension.ami = ami
+            await extension.setStatus(status)
         } else {
             extension = await this.add(exten, status, ami)
             systemLog.info(`Create ${extension}`)
@@ -175,16 +174,18 @@ class Extension {
         return this.lock
     }
 
-    async try_dial_unlock(){
-        if (DIAL_UNLOCK_TYPE.indexOf(this._lock_type) > 0){
-            if (this.channels.collection.length <= 1){
+    async canDial(){
+        if (this.lock){
+            if (!(this.channels.collection.length < 2)){
                 logicLog.info(`${this} UNLOCK`)
                 await this.setLock('OFF')
+                return true
+            } else {
+                logicLog.info(`${this} BREAK DIAL`)
+                return false
             }
-            return true
-        } else {
-            return false
         }
+        return true
     }
 
     update_pause(result){
@@ -218,7 +219,9 @@ class Extension {
         }
     }
 
-    async setStatus(value){ this._status = value }
+    async setStatus(value){
+        this._status = value
+    }
 
     async setDND(value){
         if (this._DND == value){

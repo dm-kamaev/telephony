@@ -11,6 +11,7 @@
   "dependencies": {
     "asterisk.io": "^0.1.1",
     "config": "^1.26.1",
+    "moment-timezone": "^0.5.13",
     "pg": "^7.0.2",
     "winston": "^2.3.1"
   }

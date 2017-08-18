@@ -160,7 +160,7 @@ class Channel{
     async close(reason){
         this._close_in_db(reason)
         for (let collection of this.collections){
-            collection.remove(this)
+            await collection.remove(this)
         }
         logicLog.info(`Close ${this}`)
     }
@@ -178,7 +178,7 @@ class Channel{
     }
 
     setNumber(number){
-        this.number = get_standart_phone(number)
+        this.number = getStandardPhone(number)
         // TODO 2
         this.updateInDB()
     }
@@ -221,7 +221,6 @@ class Channel{
                         'RETURNING id'
                     let result = await queryOne(setHoldSQL, [await this.id, currentDate])
                     this._hold_db_id = result.id
-                    console.log(this._hold_db_id)
                 }
             ])
             logicLog.info(`Hold ${this}`)

@@ -3,6 +3,8 @@ var aio = require('asterisk.io'),
     ami = null,   // see ami section
     agi = null;   // see agi section
 const asyncAGI = require('./asyncAGI')
+const { agiSwitch } = require('./agiSwitch')
+const { channelCollection } = require('./ami')
 
 
 agi = aio.agi(4573); // port and host
@@ -18,23 +20,43 @@ agi.on('close', function(){
     //    console.log('close');
 });
 
-agi.on('connection', async function(agiHandler){
-    asyncAGI(agiHandler)
+agi.on('connection', async function(agiConnection){
+    asyncAGI(agiConnection)
 
-    agiHandler.on('hangup', function(){
-        // console.log('hangup');
+    agiConnection.on('hangup', function(){
+        console.log('hangup');
     });
 
-    agiHandler.on('error', function(err){
+    agiConnection.on('error', function(err){
         throw err;
     });
 
-    agiHandler.on('close', function(){
-        //console.log('close');
+    agiConnection.on('close', function(){
+        console.log('close');
     });
 
     // answer the channel
     //await agiHandler.asyncCommand('ANSWER')
-    console.log('AGI')
-    let result = await agiHandler.asyncCommand('EXEC Dial SIP/112, 60')
+    //console.log(channelCollection.getByName(agiConnection.agi_channel))
+
+    let channel = channelCollection.getByName(agiConnection.agi_channel)
+    if (agiConnection.agi_extension == '*78'){
+        await agiConnection.asyncCommand('ANSWER')
+        await agiConnection.asyncCommand('HANGUP')
+        await channel.extension.setDND(true)
+        return
+    }
+    if (agiConnection.agi_extension == '*79'){
+        await agiConnection.asyncCommand('ANSWER')
+        await agiConnection.asyncCommand('HANGUP')
+        await channel.extension.setDND(false)
+        return
+    }
+    try{
+        await agiSwitch(agiConnection, channel)
+    } catch (e){
+        console.log(e)
+    }
+
+    //let result = await agiConnection.asyncCommand('EXEC Dial SIP/112, 60')
 });

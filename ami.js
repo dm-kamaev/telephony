@@ -7,6 +7,7 @@ const { TrunkCollection } = require('./trunk')
 const { ExtensionCollection } = require('./extension')
 const { Channel, ChannelCollection } = require('./channels')
 const { QueueCollection } = require('./queues')
+const { RuleCollection } = require('./rules')
 const { BridgeCollection } = require('./bridges')
 const logicLog = require('logger')(module, 'logic.log')
 const errorLog = require('logger')(module, 'error.log')
@@ -25,6 +26,15 @@ let extensionCollection = new ExtensionCollection()
 let channelCollection = new ChannelCollection()
 let bridgeCollection = new BridgeCollection()
 let queueCollection = new QueueCollection(ami)
+let ruleCollection = new RuleCollection(ami)
+
+async function loadCollection() {
+    await trunkCollection.reload()
+    await ruleCollection.reloadAll(trunkCollection)
+}
+
+loadCollection()
+
 
 let re_number = /^(PJ)?SIP\/((:?[^\/]+)\/)?(:?\w+)/g
 
@@ -60,9 +70,9 @@ async function extensionStateList() {
     async function extractValues() {
         // TODO 3
         try{
-        ami.removeListener(Event("ExtensionStatus"), addExtensionStatus)
-        ami.removeListener(Event("ExtensionStatus"), extractValues)
-        await loadExtensions(values)
+            ami.removeListener(Event("ExtensionStatus"), addExtensionStatus)
+            ami.removeListener(Event("ExtensionStatus"), extractValues)
+            await loadExtensions(values)
         } catch (e) {
             errorLog.error(e)
         }
@@ -89,7 +99,7 @@ async function loadExtensions(events) {
 
 async function handlerExtension(event){
     // TODO 1
-    await extensionCollection.checkExten(event['Exten'], event['Status'])
+    await extensionCollection.checkExten(event['Exten'], event['Status'], ami)
     // Для корректного отображения при DND, HOLD
     if (['0', '1', '16'].indexOf(event['Status']) < 0){
         let extension = extensionCollection.getByExten(event['Exten'])
@@ -151,6 +161,7 @@ function closeChannel(event) {
         channel.close({'txt': event['Cause-txt'], 'code': event['Cause']})
         if (channel.extension) {
             //TODO 3
+            channel.extension.setStatusWS('0')
         }
     } catch (e){
         errorLog.error(e)
@@ -172,7 +183,6 @@ function unholdChannel(event) {
 }
 
 function newStateChannel(event) {
-    console.log(event['Channel'])
     let channel = channelCollection.getByName(event['Channel'])
     channel.newState(event['ChannelState'])
 }
@@ -516,7 +526,6 @@ ami.on(Event('BridgeInfoChannel'), function (){})
 ami.on(Event('BridgeListComplete'), function (){})
 
 
-
 ami.on('ready', async function(){
     try{
         await extensionStateList()
@@ -526,3 +535,10 @@ ami.on('ready', async function(){
     }
     ami.action('ExtensionStateList')
 });
+
+module.exports = {
+    channelCollection,
+    trunkCollection,
+    ruleCollection,
+    extensionCollection,
+}

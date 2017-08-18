@@ -30,7 +30,7 @@ async function queryOne (querySQL, args) {
 }
 
 function backgroundQuery(querySQL, getArgs) {
-    //console.log(querySQL)
+    // console.log(querySQL)
     pool.connect(async (err, client, done) => {
         if (err){
             errorLog.error(err)

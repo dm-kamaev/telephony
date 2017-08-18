@@ -58,7 +58,6 @@ class TrunkCollection {
                 "LEFT JOIN locations as l ON l.id = t.location_id"
             let rows = await query(getAllTrunk)
             for (let row of rows){
-                console.log(row)
                 let trunk = new Trunk(row)
                 log.info(`Created trunk ${trunk}`)
                 this.collection.push(trunk)
@@ -76,11 +75,13 @@ class Trunk {
         this.name = t_name
         this.main = main
         this.default_rule_id = default_rule_id
-        this.try_switch_in = Boolean(try_switch_in)
-        this.wait_exten = Boolean(wait_exten)
+        this.trySwitchIn = Boolean(try_switch_in)
+        this.waitExten = Boolean(wait_exten)
         this.location_name = l_name
         this.number = number
         this.tracking = tracking
+        // Позже заполнит RuleCollection
+        this.defaultRule = null
     }
 
     equil(data) {
@@ -97,10 +98,10 @@ class Trunk {
         if (this.default_rule_id != default_rule_id){
             return false
         }
-        if (this.try_switch_in != (try_switch_in == 1)){
+        if (this.trySwitchIn != (try_switch_in == 1)){
             return false
         }
-        if (this.wait_exten != (wait_exten == 1)){
+        if (this.waitExten != (wait_exten == 1)){
             return false
         }
         if (this.location_name != location_name){
@@ -116,12 +117,7 @@ class Trunk {
     }
 
     toString(){
-        return `- Trunk ${this.name} | Location_name ${this.location_name} | Default Rule ${this.default_rule_id} | Try Switch In ${this.try_switch_in} | Wait Exten ${this.wait_exten} | Tracking ${this.tracking}`
-    }
-
-    get default_rule(){
-        // TODO 3
-        return
+        return `- Trunk ${this.name} | Location_name ${this.location_name} | Default Rule ${this.default_rule_id} | Try Switch In ${this.trySwitchIn} | Wait Exten ${this.waitExten} | Tracking ${this.tracking}`
     }
 }
 

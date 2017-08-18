@@ -30,7 +30,7 @@ class QueueCollection {
     async loadFromDB(){
         let getQueuesSQL = "SELECT id, name, abandon_webhook " +
                 "FROM queues " +
-                "WHERE active = True"
+                "WHERE active IS True"
         let rows = await query(getQueuesSQL)
         await this._compare(rows)
     }
