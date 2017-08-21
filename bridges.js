@@ -61,7 +61,9 @@ class BridgeCollection {
             bridge.created = true
             logicLog.info(`Create Bridge Initiator ${bridge.initiator}`)
         } else if (DESTROY_STATUS.indexOf(status) !== -1){
-            bridge.destroy()
+            if (bridge){
+                bridge.destroy()
+            }
         } else {
             logicLog.error('неизвестный dialstatus в DialEnd')
         }

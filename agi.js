@@ -24,7 +24,6 @@ agi.on('connection', async function(agiConnection){
     asyncAGI(agiConnection)
 
     agiConnection.on('hangup', function(){
-        console.log('hangup');
     });
 
     agiConnection.on('error', function(err){
@@ -32,7 +31,6 @@ agi.on('connection', async function(agiConnection){
     });
 
     agiConnection.on('close', function(){
-        console.log('close');
     });
 
     // answer the channel

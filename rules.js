@@ -99,14 +99,18 @@ class RuleCollection {
         for (let switchValue in outSwitchDict) {
             outSwitchDict[switchValue]._rule = getRule(outSwitchDict[switchValue]._rule_id)
         }
-        this.switch.in = outSwitchDict
-        this.switch.out = inSwitchDict
+        this.switch.in = inSwitchDict
+        this.switch.out = outSwitchDict
         this.idRuleDict = idRuleDict
         this.idTimeGroupDict = idTimeGroupDict
     }
 
-    getRuleFromSwitch(switchType, value){
-        return this.switch[switchType][value] || EMPTY_RULE
+    getRuleFromSwitch(switchType, value) {
+        let router = this.switch[switchType][value]
+        if (router && router._rule) {
+            return router._rule
+        }
+        return EMPTY_RULE
     }
 
     getRuleByID(id){
@@ -162,6 +166,10 @@ class Rule {
         this._off_hours_rule_id = off_hours_rule_id || null
     }
 
+    toString(){
+        return `ID ${this.id} | Value ${(this.value) ? JSON.stringify(this.value) : null}`
+    }
+
     get noAnswerRule(){
         return this._noAnswerRule || EMPTY_RULE
     }
@@ -195,10 +203,11 @@ class Rule {
 
         // Execute rule
         agiSession.processedRules.push(this)
+        let result
         if (this.checkTime()){
             logicLog.info(`${agiSession} RULE - CHECK TIME - TRUE`)
             try {
-                let result = await this.do(agiSession)
+                result = await this.do(agiSession)
             } catch (e) {
                 errorLog.error(`${agiSession} ERROR in RUN RULE ${JSON.stringify(this)}`)
                 errorLog.error(e)
@@ -209,11 +218,11 @@ class Rule {
                 return result
             } else {
                 logicLog.info(`${agiSession} RULE - NO ANSWER id ${this._no_answer_rule_id} - RUN`)
-                return await this.noAnswerRule.run(result, agiSession)
+                return await this.noAnswerRule.run(agiSession, result)
             }
         } else {
             logicLog.info(`${agiSession} RULE - CHECK TIME - FALSE | RUN OFF HOURS ${this._off_hours_rule_id}`)
-            return await this.offHoursRule.run("OFF_HOURS", agiSession)
+            return await this.offHoursRule.run(agiSession, "OFF_HOURS")
         }
     }
 
@@ -232,7 +241,7 @@ class Rule {
                 case 'queue':
                     return await agiSession.queue(this.value.params)
                 case 'playback':
-                    return await agiSession.playback(this.value.params.file)
+                    return await agiSession.playback(this.value.params)
                 default:
                     logicLog.error(`Unknown type command in rule ${JSON.stringify(this)}`)
                     throw new Error('Unknown type command in rule')

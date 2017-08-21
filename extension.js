@@ -176,7 +176,7 @@ class Extension {
 
     async canDial(){
         if (this.lock){
-            if (!(this.channels.collection.length < 2)){
+            if (this.channels.collection.length < 2){
                 logicLog.info(`${this} UNLOCK`)
                 await this.setLock('OFF')
                 return true
@@ -188,7 +188,7 @@ class Extension {
         return true
     }
 
-    update_pause(result){
+    async update_pause(){
         if (this._pause == (this._DND || this._lock)){
             return
         }
@@ -196,7 +196,7 @@ class Extension {
 
         this.ami.action('QueuePause', {
             'Interface': `SIP/${this.exten}`,
-            'Paused': this._pause,
+            'Paused': (this._pause) ? 'True' : 'False',
             'Reason': 'No Answer'
         })
     }
@@ -234,12 +234,12 @@ class Extension {
             "INSERT INTO extension_dnd (extension, value) " +
             `VALUES ('${this.exten}', ${value})`
         )
-        let result = await this.ami.asyncAction('DBPut', {
+        await this.ami.asyncAction('DBPut', {
             Family: 'CUSTOM_DND',
             Key: this.exten,
             Val: (this._DND) ? 'ON' : 'OFF'
         })
-        await this.update_pause(result)
+        await this.update_pause()
     }
 
     setLock(value, channel_id){

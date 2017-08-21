@@ -6,53 +6,42 @@ const TIMEOUT = 300
 
 const completionActionDict = {
     // CUSTOM status
-    'NO_RULE': [async (agiSession)=> await agiSession.asyncCommand('EXEC Playback "/var/lib/asterisk/moh/messages/CHANUNAVAIL"')]
+    'NO_RULE': [async (agiSession)=> await agiSession.agi.asyncCommand('EXEC Playback "/var/lib/asterisk/moh/messages/CHANUNAVAIL"')],
+    'PAUSE': null,
+    'DND': [async (agiSession)=> await agiSession.agi.asyncCommand('EXEC Playback "/var/lib/asterisk/moh/messages/DND"')],
+    'PLAYBACK_SUCCESS': null,
+    'PLAYBACK_FAILURE': [(agiSession) => logicLog.error(`${agiSession} STATUS PLAYBACK_FAILURE}`)],
+    'AFK': [async (agiSession)=> await agiSession.agi.asyncCommand('EXEC Playback "/var/lib/asterisk/moh/messages/DND"')],
+    'BUSY_CHAN_1': [async (agiSession)=> await agiSession.agi.asyncCommand('EXEC Playback "/var/lib/asterisk/moh/messages/BUSY"')],
+    'BUSY_CHAN_2': [async (agiSession)=> await agiSession.agi.asyncCommand('EXEC Playback "/var/lib/asterisk/moh/messages/BUSY"')],
+    // Dial status Asterisk
+    // TODO CHECK CHANUNAVAIL ?
+    'CHANUNAVAIL': [async (agiSession)=> await agiSession.agi.asyncCommand('EXEC Playback "/var/lib/asterisk/moh/messages/CHANUNAVAIL"')],
+    'CONGESTION': [(agiSession) => logicLog.error(`${agiSession} STATUS CONGESTION}`)],
+    'NOANSWER': [async (agiSession)=> await agiSession.agi.asyncCommand('EXEC Playback "/var/lib/asterisk/moh/messages/NOANSWER"')],
+    'BUSY': [async (agiSession)=> await agiSession.agi.asyncCommand('EXEC Playback "/var/lib/asterisk/moh/messages/BUSY"')],
+    'ANSWER': null,
+    'CANCEL': [(agiSession) => logicLog.error(`${agiSession} STATUS CANCEL}`)],
+    'DONTCALL': [(agiSession) => logicLog.error(`${agiSession} STATUS DONTCALL}`)],
+    'TORTURE': [(agiSession) => logicLog.error(`${agiSession} STATUS TORTURE}`)],
+    'INVALIDARGS': [(agiSession) => logicLog.error(`${agiSession} STATUS INVALIDARGS}`)],
+    // Queue Status Asterisk
+    'TIMEOUT': [async (agiSession)=> await agiSession.agi.asyncCommand('EXEC Playback "/var/lib/asterisk/moh/messages/TIMEOUT"'),
+        (agiSession) => logicLog.error(`${agiSession} STATUS TIMEOUT}`)],
+    'FULL': [(agiSession) => logicLog.error(`${agiSession} STATUS FULL}`)],
+    'JOINEMPTY': [async (agiSession)=> await agiSession.agi.asyncCommand('EXEC Playback "/var/lib/asterisk/moh/messages/TIMEOUT"'),
+        (agiSession) => logicLog.error(`${agiSession} STATUS JOINEMPTY}`)],
+    'LEAVEEMPTY': [async (agiSession)=> await agiSession.agi.asyncCommand('EXEC Playback "/var/lib/asterisk/moh/messages/TIMEOUT"'),
+        (agiSession) => logicLog.error(`${agiSession} STATUS LEAVEEMPTY}`)],
+    'JOINUNAVAIL': [async (agiSession)=> await agiSession.agi.asyncCommand('EXEC Playback "/var/lib/asterisk/moh/messages/TIMEOUT"'),
+        (agiSession) => logicLog.error(`${agiSession} STATUS JOINUNAVAIL}`)],
+    'LEAVEUNAVAIL': [async (agiSession)=> await agiSession.agi.asyncCommand('EXEC Playback "/var/lib/asterisk/moh/messages/TIMEOUT"'),
+        (agiSession) => logicLog.error(`${agiSession} STATUS LEAVEUNAVAIL}`)],
+    'CONTINUE': null,
+    'UNKNOWN': [async (agiSession)=> await agiSession.agi.asyncCommand('EXEC Playback "/var/lib/asterisk/moh/messages/TIMEOUT"'),
+        (agiSession) => logicLog.error(`${agiSession} STATUS UNKNOWN}`)],
 }
 
-            // let action_dict = {
-            //
-            //     # AstDom Status
-            //     'NO_RULE': [(True, self.agi.execute, 'Playback', '/var/lib/asterisk/moh/messages/CHANUNAVAIL'), ],
-            //     'PAUSE': None,
-            //     'DND': [(True, self.agi.execute, 'Playback', '/var/lib/asterisk/moh/messages/DND'), ],
-            //     'PLAYBACK_SUCCESS': None,
-            //     'PLAYBACK_FAILURE': [(False, critical_completion, 'STATUS PLAYBACK_FAILURE')],
-            //     # lock типа AFK
-            //     'AFK': [(True, self.agi.execute, 'Playback', '/var/lib/asterisk/moh/messages/DND'), ],
-            //     'BUSY_CHAN_1': [(True, self.agi.execute, 'Playback', '/var/lib/asterisk/moh/messages/BUSY'), ],
-            //     'BUSY_CHAN_2': [(True, self.agi.execute, 'Playback', '/var/lib/asterisk/moh/messages/BUSY'), ],
-            //     # Dial Status
-            //     'CHANUNAVAIL': [check_chanunavail(), ],
-            //     'CONGESTION': [(False, critical_completion, 'STATUS CONGESTION'), ],
-            //     'NOANSWER': [(True, self.agi.execute, 'Playback', '/var/lib/asterisk/moh/messages/NOANSWER'), ],
-            //     'BUSY': [(True, self.agi.execute, 'Playback', '/var/lib/asterisk/moh/messages/BUSY'), ],
-            //     'ANSWER': None,
-            //     'CANCEL': [(False, critical_completion, 'STATUS CANCEL'), ],
-            //     'DONTCALL': [(False, critical_completion, 'STATUS DONTCALL'), ],
-            //     'TORTURE': [(False, critical_completion, 'STATUS TORTURE'), ],
-            //     'INVALIDARGS': [(False, critical_completion, 'STATUS INVALIDARGS'), ],
-            //     # Queue Status
-            //     'TIMEOUT': [(True, self.agi.execute, 'Playback', '/var/lib/asterisk/moh/messages/TIMEOUT'),
-            //                 (False, critical_completion, 'STATUS TIMEOUT'),
-            //                 ],
-            //     'FULL': [(False, critical_completion, 'STATUS FULL'), ],
-            //     'JOINEMPTY': [(True, self.agi.execute, 'Playback', '/var/lib/asterisk/moh/messages/TIMEOUT'),
-            //                   (False, critical_completion, 'STATUS TIMEOUT'),
-            //                   ],
-            //     'LEAVEEMPTY': [(True, self.agi.execute, 'Playback', '/var/lib/asterisk/moh/messages/TIMEOUT'),
-            //                    (False, critical_completion, 'STATUS LEAVEEMPTY'),
-            //                    ],
-            //     'JOINUNAVAIL': [(True, self.agi.execute, 'Playback', '/var/lib/asterisk/moh/messages/TIMEOUT'),
-            //                     (False, critical_completion, 'STATUS JOINUNAVAIL'),
-            //                     ],
-            //     'LEAVEUNAVAIL': [(True, self.agi.execute, 'Playback', '/var/lib/asterisk/moh/messages/TIMEOUT'),
-            //                      (False, critical_completion, 'STATUS LEAVEUNAVAIL'),
-            //                      ],
-            //     'CONTINUE': None,
-            //     'UNKNOWN': [(True, self.agi.execute, 'Playback', '/var/lib/asterisk/moh/messages/TIMEOUT'),
-            //                 (False, critical_completion, 'STATUS JOINUNAVAIL'),
-            //                 ],
-            // }
 
 class AgiSession {
     constructor(agi, channel){
@@ -108,9 +97,13 @@ class AgiSession {
                 LEAVEUNAVAIL -
                 CONTINUE
         */
-        logicLog.info(`${this} AGI - COMPLETION status ${status}`)
         status = status.toUpperCase()
-        await completionActionDict['NO_RULE'][0](this.agi)
+        let actions = completionActionDict[status]
+        if (actions){
+            for (let action of actions){
+                await action(this)
+            }
+        }
         await this.agi.asyncCommand('HangUp')
     }
 
@@ -123,58 +116,70 @@ class AgiSession {
         }
     }
 
+    async playback(params){
+        let { file } = params
+        let status = await this.agi.asyncCommand(`EXEC Playback "${file}"`)
+        if (status['1'] == 0){
+            return 'PLAYBACK_SUCCESS'
+        }
+        return 'PLAYBACK_FAILURE'
+    }
+
+    async queue(params){
+        let {name, timeout = TIMEOUT} = params
+        await this.agi.asyncCommand(`EXEC Queue ${name},c,,,${timeout}`)
+        let status = await this.agi.asyncCommand('GET VARIABLE QUEUESTATUS')
+        return status['2']
+    }
+
     async dial(params){
-        //await this.agi.asyncCommand(`EXEC Dial SIP/${number}, 60`)
-        let { preferred = null, asterTrunkStr = null, number = null, timeout = TIMEOUT } = params
-        logicLog.info(`${this} DIAL | preferred ${preferred}, trunk ${asterTrunkStr}, Number ${number}, Timeout ${timeout}`)
-        let result
+        let { number = null, timeout = TIMEOUT } = params
+        let asterTrunkStr = params.trunk || null
+        logicLog.info(`${this} DIAL  trunk ${asterTrunkStr }, Number ${number}, Timeout ${timeout}`)
         if (number.length == 3){
             if (!asterTrunkStr){
                 asterTrunkStr = "SIP"
             }
             let extension = extensionCollection.getByExten(number)
             if (!extension){
-                logicLog.info(`${this} DIAL - DIAL AST`)
-                // Вернуть статус, номер не существует
-                result = await this.call({asterTrunkStr, number, timeout})
-            } else {
-                if (extension.DND){
-                    logicLog.info(`${this} DIAL - RETURN DND`)
-                    result = 'DND'
-                } else {
-                    if (extension.channels.collection.length == 0){
-                        logicLog.info(`${this} DIAL - RUN CALL`)
-                        result = await this.call({asterTrunkStr, number, timeout})
-                    } else if (extension.channels.collection.length == 1){
-                        logicLog.info(`${this} DIAL - RUN CALL second line`)
-                        // TODO without answer test
-                        result = await this.call({asterTrunkStr, number, timeout, music_class:'second-call'})
-                    } else {
-                        logicLog.info(`${this} DIAL - RETURN BUSY_CHAN_2`)
-                        result = 'BUSY_CHAN_2'
-                    }
-                }
+                logicLog.info(`${this} DIAL - extension ${number} NOT FOUND - RETURN CHANUNAVAIL`)
+                return 'CHANUNAVAIL'
             }
-            // TODO SECURE
-        } else if (number.length == 11){
+            if (extension.DND){
+                logicLog.info(`${this} DIAL - RETURN DND`)
+                return 'DND'
+            }
+            if (extension.channels.collection.length == 0){
+                logicLog.info(`${this} DIAL - RUN CALL`)
+                return await this.call({asterTrunkStr, number, timeout})
+            }
+            if (extension.channels.collection.length == 1){
+                logicLog.info(`${this} DIAL - RUN CALL second line`)
+                // TODO without answer test
+                return await this.call({asterTrunkStr, number, timeout, music_class:'second-call'})
+            }
+            logicLog.info(`${this} DIAL - RETURN BUSY_CHAN_2`)
+            return 'BUSY_CHAN_2'
+        }
+        // TODO SECURE
+        if (number.length == 11){
             if (asterTrunkStr == null){
                 asterTrunkStr = this.channel.extension.default_trunk
             }
             logicLog.info(`${this} DIAL - RUN CALL`)
-            result = await this.call({asterTrunkStr, number, timeout})
-            // TODO SECURE
-        } else {
-            if (asterTrunkStr == null){
-                asterTrunkStr = 'SIP'
-            }
-            logicLog.info(`${this} DIAL - RUN CALL`)
-            result = await this.call({asterTrunkStr, number, timeout})
+            return await this.call({asterTrunkStr, number, timeout})
+
         }
-        return result
+        // TODO SECURE
+        if (asterTrunkStr == null){
+            asterTrunkStr = 'SIP'
+        }
+        logicLog.info(`${this} DIAL - RUN CALL`)
+        return await this.call({asterTrunkStr, number, timeout})
     }
 
     async call(params){
-        let {trunk, number, timeout=TIMEOUT, music_class=null} = params
+        let {asterTrunkStr, number, timeout=TIMEOUT, music_class=null} = params
         let opts = ''
         if (music_class){
             opts += `m(${music_class})`
@@ -184,8 +189,8 @@ class AgiSession {
             opts = "," + opts
         }
 
-        logicLog.info(`${this} Dial ${trunk}/${number}, ${timeout}, ${opts}`)
-        await this.agi.asyncCommand(`EXEC Dial ${trunk}/${number}, ${timeout}${opts}`)
+        logicLog.info(`${this} Dial ${asterTrunkStr}/${number}, ${timeout}, ${opts}`)
+        await this.agi.asyncCommand(`EXEC Dial ${asterTrunkStr}/${number}, ${timeout}${opts}`)
         let result = await this.agi.asyncCommand('GET VARIABLE DIALSTATUS')
         return result['2']
     }

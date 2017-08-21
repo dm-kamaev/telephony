@@ -133,7 +133,7 @@ class Queue {
                 'Queue': this.name,
                 'Interface': 'SIP/' + agent.number,
                 'Penalty': agent.penalty,
-                'Paused': false
+                'Paused': 'False'
             })
             logicLog.info(`Agents ${agent.number} add to Queue ${this.name} Penalty ${agent.penalty}`)
         }
