@@ -1,4 +1,5 @@
 node_modules
 log
 .idea
+default.json
 changed_table.txt
