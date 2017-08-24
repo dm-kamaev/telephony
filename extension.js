@@ -111,7 +111,7 @@ class Extension {
     constructor(exten, status, ami){
         this.exten = exten
         this.ami = ami
-        this.flag_ws = 'Phone' + exten.toString()
+        this.flagWS = 'Phone' + exten.toString()
         this._DND = false
         this._lock = false
         this._lock_type = null
@@ -288,11 +288,11 @@ class Extension {
             statusWS = value
         }
         this._status_ws = statusWS
-        // TODO 3
-        // self.ami.interface.api_new_extension_state(self.exten, int(self.state_ws), EXTENSION_STATUS[self.state_ws])
+        this.ami.appInterface.newExtensionState(this.exten, Number(this.statusWS), EXTENSION_STATUS[this.statusWS])
     }
 }
 
 module.exports = {
-    ExtensionCollection
+    ExtensionCollection,
+    EXTENSION_STATUS
 }

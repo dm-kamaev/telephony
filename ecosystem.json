@@ -1,0 +1,16 @@
+{
+  "apps" : [
+    {
+      "name"      : "telephony",
+      "script"    : "app.js",
+      "error_file"  : "/dev/null",
+      "out_file"    : "/dev/null",
+      "env": {
+        "NODE_PATH": "."
+      },
+      "env_production" : {
+        "NODE_ENV": "production"
+      }
+    }
+  ]
+}

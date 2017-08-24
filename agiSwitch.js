@@ -1,6 +1,6 @@
 "use strict";
 const logicLog = require('logger')(module, 'logic.log')
-const {ruleCollection, extensionCollection} = require('./ami')
+const { appInterface } = require('./ami')
 
 const TIMEOUT = 300
 
@@ -140,7 +140,7 @@ class AgiSession {
             if (!asterTrunkStr){
                 asterTrunkStr = "SIP"
             }
-            let extension = extensionCollection.getByExten(number)
+            let extension = appInterface.extensionCollection.getByExten(number)
             if (!extension){
                 logicLog.info(`${this} DIAL - extension ${number} NOT FOUND - RETURN CHANUNAVAIL`)
                 return 'CHANUNAVAIL'
@@ -190,7 +190,8 @@ class AgiSession {
         }
 
         logicLog.info(`${this} Dial ${asterTrunkStr}/${number}, ${timeout}, ${opts}`)
-        await this.agi.asyncCommand(`EXEC Dial ${asterTrunkStr}/${number}, ${timeout}${opts}`)
+        //await this.agi.asyncCommand(`EXEC Dial ${asterTrunkStr}/${number}, "${timeout}"${opts}`)
+        await this.agi.asyncCommand(`EXEC Dial ${asterTrunkStr}/${number},"${10}"${opts}`)
         let result = await this.agi.asyncCommand('GET VARIABLE DIALSTATUS')
         return result['2']
     }
@@ -199,8 +200,8 @@ class AgiSession {
         if (this.extenEmpty()){
             if (this.channel.trunk.trySwitchIn){
                 logicLog.info(`${this} SWITCH - GET RULE IN VALUE ${this.channel.number}`)
-                let rule = ruleCollection.getRuleFromSwitch('in', this.channel.number)
-                if (rule !== ruleCollection.EMPTY_RULE){
+                let rule = appInterface.ruleCollection.getRuleFromSwitch('in', this.channel.number)
+                if (rule !== appInterface.ruleCollection.EMPTY_RULE){
                     return await rule.run(this)
                 }
             }
@@ -214,8 +215,8 @@ class AgiSession {
         if (!await this.channel.extension.canDial()){
             return this.channel.extension._lock_type
         }
-        let rule = ruleCollection.getRuleFromSwitch('out', this.exten)
-        if (rule === ruleCollection.EMPTY_RULE && (this.exten.length == 3 || this.exten.length == 11)){
+        let rule = appInterface.ruleCollection.getRuleFromSwitch('out', this.exten)
+        if (rule === appInterface.ruleCollection.EMPTY_RULE && (this.exten.length == 3 || this.exten.length == 11)){
             logicLog.info(`${this} SWITCH OUT - RULE EMPTY - DIAL ${this.exten}`)
             return await this.dial({number: this.exten})
         }

@@ -72,4 +72,5 @@ module.exports = {
     query,
     queryOne,
     backgroundQuery,
+    pool,
 }

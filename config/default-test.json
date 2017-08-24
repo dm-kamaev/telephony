@@ -14,5 +14,15 @@
         "login": "amidom",
         "password": "MNiun2u3i4nBVgh23456-z0",
         "port": 5038
+    },
+    "ws": {
+        "address": "ws://site.domovenok.corp:8888/ws?",
+        "clientFlag": "Client1C",
+        "serverFlag": "Pavel",
+        "authKey": "asdjf27FASdh27daq3k1"
+    },
+    "site": {
+        "host": "www.dev.domovenok.su",
+        "schema": "https"
     }
 }

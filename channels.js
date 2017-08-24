@@ -1,7 +1,8 @@
 "use strict";
 const logicLog = require('logger')(module, 'logic.log')
-const { getStandardPhone, backgroundTask } = require('./utils')
+const { getStandardPhone, backgroundTask, sendRequest } = require('./utils')
 const { query, queryOne, backgroundQuery } = require('./db')
+const config = require('config');
 
 const EventEmitter = require('events');
 class ChannelsEmitter extends EventEmitter {}
@@ -101,7 +102,7 @@ class ChannelCollection{
     }
 
     getOtherChannel(channel){
-        for (let chn in this.collection){
+        for (let chn of this.collection){
             if (chn != channel){
                 return chn
             }
@@ -115,7 +116,6 @@ class Channel{
         this._emitter = new ChannelsEmitter()
         this.name = name
         this.unique_id = unique_id
-        // TODO 2
         this.number = getStandardPhone(number)
         this._originate_key = null
         this._incoming = null
@@ -128,7 +128,6 @@ class Channel{
         this._hold = false
         this._hold_db_id = null
         this._not_write_first_connect = Boolean(channel_id)
-        // TODO 2
         this.dataWS = null
         this._bridge = null
 
@@ -139,22 +138,36 @@ class Channel{
         if (this.trunk){
             this.call_number = this.trunk.number
         } else {
-            // TODO 2
             this.call_number = getStandardPhone(exten)
         }
 
-        if (this.trunk){
-            if (this.trunk.tracking && !this.incoming){
-                if (['74959843131', '79255343606', '79161387884'].indexOf(self.number) < 0 ){
-                    // TODO 2
-                    // send ticket
+        if (true || this.trunk){
+            if (true || this.trunk.tracking && !this.incoming){
+                if (true || ['74959843131', '79255343606', '79161387884'].indexOf(self.number) < 0 ){
+                    let connectParam = {
+                        hostname: config.site.host,
+                        protocol: config.site.schema + ':',
+                        rejectUnauthorized: (config.app.debug) ? false : true,
+                        path: "/service/calltracking",
+                        method: 'POST',
+                        headers: {
+                            "X-Dom-Service": "AstDom",
+                            'Content-Type': 'application/json'
+                        }
+                    }
+                    backgroundTask([
+                        async ()=> sendRequest(connectParam, JSON.stringify({
+                                "phone": this.call_number,
+                                "channel": await this.id
+                        }))
+                    ])
                 }
             }
         }
     }
-    
+
     toString (){
-        return `- Channel ${this.name} | Incoming ${this.incoming} | Trunk ${this.trunk} | Called Number ${this.call_number} | Data WS ${this.dataWS} | DB ID ${this._id}`
+        return `- Channel ${this.name} | Incoming ${this.incoming} | Trunk ${this.trunk} | Called Number ${this.call_number} | Data WS ${JSON.stringify(this.dataWS)} | DB ID ${this._id}`
     }
 
     async close(reason){
@@ -179,7 +192,6 @@ class Channel{
 
     setNumber(number){
         this.number = getStandardPhone(number)
-        // TODO 2
         this.updateInDB()
     }
 
@@ -348,19 +360,6 @@ class Channel{
         }
         this._emitter.emit('createdInDB')
     }
-
-    // async _save(){
-    //     if (this._id == null){
-    //         await this.createInDB()
-    //     } else {
-    //         if (this._not_write_first_connect == false){
-    //             let loadChannel = "UPDATE channels SET channel_name = $1, unique_id=$2, number=$3, incoming=$4 "+
-    //                     "WHERE id=$6 " +
-    //                      "RETURNING $5"
-    //             await queryOne(loadChannel, [this.name, this.unique_id, this.number, this.incoming, this._id])
-    //         }
-    //     }
-    // }
 
     updateInDB(){
         if (this._not_write_first_connect == false){

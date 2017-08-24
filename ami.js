@@ -3,16 +3,13 @@ const aio = require('asterisk.io')
 const config = require('config');
 const asyncAMI = require('./asyncAMI')
 const { query, queryOne, backgroundQuery } = require('./db')
-const { TrunkCollection } = require('./trunk')
-const { ExtensionCollection } = require('./extension')
-const { Channel, ChannelCollection } = require('./channels')
-const { QueueCollection } = require('./queues')
-const { RuleCollection } = require('./rules')
-const { BridgeCollection } = require('./bridges')
+const { Channel } = require('./channels')
 const logicLog = require('logger')(module, 'logic.log')
 const errorLog = require('logger')(module, 'error.log')
-const { getStandardPhone } = require('./utils')
-
+const uuidv4 = require('uuid/v4');
+const { AppInterface } = require('./interface')
+const { sendRequest } = require('./utils')
+const { URL } = require('url')
 
 const ami = aio.ami(
     config.ami.host,
@@ -21,22 +18,14 @@ const ami = aio.ami(
     config.ami.password
 );
 
-let trunkCollection = new TrunkCollection()
-let extensionCollection = new ExtensionCollection()
-let channelCollection = new ChannelCollection()
-let bridgeCollection = new BridgeCollection()
-let queueCollection = new QueueCollection(ami)
-let ruleCollection = new RuleCollection(ami)
-
-async function loadCollection() {
-    await trunkCollection.reload()
-    await ruleCollection.reloadAll(trunkCollection)
-}
-
-loadCollection()
+asyncAMI(ami)
+const appInterface = new AppInterface(ami)
+appInterface.reloadMainSettings()
+ami.appInterface = appInterface
 
 
-let re_number = /^(PJ)?SIP\/((:?[^\/]+)\/)?(:?\w+)/g
+const re_number = /^(PJ)?SIP\/((:?[^\/]+)\/)?(:?\w+)/g
+const re_voxlink = /^(:?IAX2\/voxlink)-/g
 
 function getUniqueTempID(event) {
     let linkedID = event['Linkedid']
@@ -53,11 +42,26 @@ function parseChannelName(channelName) {
     if (parseData){
         return {number: parseData[4], trunk: parseData[3]}
     }
-
 }
 
+function parseVoxlinkChannel(channelName) {
+    re_voxlink.lastIndex = 0
+    let parseData = re_voxlink.exec(channelName)
+    if (parseData){
+        return { trunk: parseData[1]}
+    } else {
+        return null
+    }
+}
 
-asyncAMI(ami)
+function convertChannelStatus(status){
+    if (status == '6'){
+        return 1
+    } else {
+        return null
+    }
+}
+
 
 /* Extension Start */
 async function extensionStateList() {
@@ -68,8 +72,13 @@ async function extensionStateList() {
     }
 
     async function extractValues() {
-        // TODO 3
         try{
+            for (let extension of appInterface.extensionCollection.collection){
+                if (appInterface.reloadedExtension.indexOf(extension.exten) == -1){
+                    appInterface.extensionCollection.remove(extension)
+                }
+            }
+
             ami.removeListener(Event("ExtensionStatus"), addExtensionStatus)
             ami.removeListener(Event("ExtensionStatus"), extractValues)
             await loadExtensions(values)
@@ -85,9 +94,8 @@ async function extensionStateList() {
 
 async function loadExtensions(events) {
     for (let event of events){
-        // TODO 3
-        // TODO 2
-        let extension = await extensionCollection.add_or_reload(event['Exten'], event['Status'], ami)
+        appInterface.reloadedExtension.push(event['Exten'])
+        let extension = await appInterface.extensionCollection.add_or_reload(event['Exten'], event['Status'], ami)
         await extension.checkDND()
         await extension.checkLock()
     }
@@ -98,17 +106,15 @@ async function loadExtensions(events) {
 
 
 async function handlerExtension(event){
-    // TODO 1
-    await extensionCollection.checkExten(event['Exten'], event['Status'], ami)
+    await appInterface.extensionCollection.checkExten(event['Exten'], event['Status'], ami)
     // Для корректного отображения при DND, HOLD
     if (['0', '1', '16'].indexOf(event['Status']) < 0){
-        let extension = extensionCollection.getByExten(event['Exten'])
+        let extension = appInterface.extensionCollection.getByExten(event['Exten'])
         extension.setStatusWS(event['Status'])
     }
     // Что бы обновлялся статус ws при перезагрузке телефона (мб костыль)
     if (event['Status'] == '0'){
-        // TODO 1
-        let extension = extensionCollection.getByExten(event['exten'])
+        let extension = appInterface.extensionCollection.getByExten(event['exten'])
         if (extension && extension.statusWS == '4'){
             extension.setStatusWS('0')
         }
@@ -121,26 +127,32 @@ async function handlerExtension(event){
 /* Channels Start*/
 async function addChannel(event, channel_id) {
     channel_id = channel_id || null
-    try{
-        let number
-        // TODO 3 Voxlink
-        let resultDict = parseChannelName(event['Channel'])
-        // TODO 2
-        let extension = extensionCollection.getByExten(resultDict['number'])
-        let trunk = null
-        if (['', 's'].indexOf(event['Exten']) < 0){
-            trunk = trunkCollection.getByChannelName('SIP/' + event['Exten'])
+    try {
+        let number, extension, trunk
+        const voxLinkData = parseVoxlinkChannel(event['Channel'])
+        if (voxLinkData){
+            number = '911'
+            extension = null
+            trunk = appInterface.trunkCollection.getByChannelName(voxLinkData.trunk)
         }
-        if (trunk == null){
-            trunk = trunkCollection.getByChannelName('SIP/' + event['Exten'])
-        }
-        if (trunk){
-            number = event['CallerIDNum']
-        } else {
-            number = resultDict['number']
+        else {
+            let resultDict = parseChannelName(event['Channel'])
+            extension = appInterface.extensionCollection.getByExten(resultDict['number'])
+            trunk = null
+            if (['', 's'].indexOf(event['Exten']) < 0) {
+                trunk = appInterface.trunkCollection.getByChannelName('SIP/' + event['Exten'])
+            }
+            if (trunk == null) {
+                trunk = appInterface.trunkCollection.getByChannelName('SIP/' + event['Exten'])
+            }
+            if (trunk) {
+                number = event['CallerIDNum']
+            } else {
+                number = resultDict['number']
+            }
         }
         let channel = new Channel(event['Channel'], event['Uniqueid'], number, extension, trunk, event['Exten'], channel_id)
-        channelCollection.add(channel)
+        appInterface.channelCollection.add(channel)
         if (channel_id){
             logicLog.info(`Loaded ${channel}`)
         } else {
@@ -157,10 +169,10 @@ async function addChannel(event, channel_id) {
 
 function closeChannel(event) {
     try {
-        let channel = channelCollection.getByName(event['Channel'])
+        let channel = appInterface.channelCollection.getByName(event['Channel'])
         channel.close({'txt': event['Cause-txt'], 'code': event['Cause']})
         if (channel.extension) {
-            //TODO 3
+            appInterface.newCallState(channel, 4, [channel.extension.flagWS])
             channel.extension.setStatusWS('0')
         }
     } catch (e){
@@ -169,21 +181,23 @@ function closeChannel(event) {
 }
 
 function holdChannel(event) {
-    // todo 1
-    let channel = channelCollection.getByName(event['Channel'])
+    let channel = appInterface.channelCollection.getByName(event['Channel'])
     channel.setHold(true)
-    // TODO 3
+    if (channel.extension){
+        appInterface.newCallState(channel, 5, [channel.extension.flagWS])
+    }
 }
 
 function unholdChannel(event) {
-    // todo 1
-    let channel = channelCollection.getByName(event['Channel'])
+    let channel = appInterface.channelCollection.getByName(event['Channel'])
     channel.setHold(false)
-    // TODO 3
+    if (channel.extension){
+        appInterface.newCallState(channel, convertChannelStatus(event['ChannelState']), [channel.extension.flagWS])
+    }
 }
 
 function newStateChannel(event) {
-    let channel = channelCollection.getByName(event['Channel'])
+    let channel = appInterface.channelCollection.getByName(event['Channel'])
     channel.newState(event['ChannelState'])
 }
 
@@ -195,10 +209,10 @@ async function addBridge(event) {
         let destChannel
         if (event['Channel']){
             let uniqueTempID = getUniqueTempID(event)
-            let channel = channelCollection.getByName(event['Channel'])
-            destChannel = channelCollection.getByName(event['DestChannel'])
+            let channel = appInterface.channelCollection.getByName(event['Channel'])
+            destChannel = appInterface.channelCollection.getByName(event['DestChannel'])
 
-            let bridge = await bridgeCollection.add([channel, destChannel], event['DestLinkedid'], uniqueTempID)
+            let bridge = await appInterface.bridgeCollection.add([channel, destChannel], event['DestLinkedid'], uniqueTempID)
             logicLog.info(`Prepared ${bridge}`)
             if (destChannel.trunk && destChannel.number == ''){
                 let number = event['DialString'].split('/').pop()
@@ -207,14 +221,14 @@ async function addBridge(event) {
             if (channel.extension){
                 if (channel.blind_transfer){
                     delete channel.blind_transfer
-                    // TODO 3
+                    appInterface.newCallState(channel, 3, [channel.extension.flagWS])
                     channel.extension.setStatusWS('20')
                 } else if (channel.originate_key){
-                    // TODO 3
+                    appInterface.newCallState(channel, 3, [channel.extension.flagWS])
                     channel.extension.setStatusWS('20')
                 } else {
                     channel.extension.setStatusWS('20')
-                    // TODO 3
+                    appInterface.newCall(channel, destChannel.number, 'outgoing', destChannel.dataWS, 3, [channel.extension.flagWS], destChannel.get_location_id(), destChannel.get_dialed_number())
                 }
             }
             // Принимающий звонок
@@ -230,17 +244,18 @@ async function addBridge(event) {
                 } catch(e){
                     transferData = null
                 }
-                // TODO 3
+                appInterface.newCall(destChannel, channel.number, 'incoming', channel.dataWS, 0, [destChannel.extension.flagWS],  channel.get_location_id(), channel.get_dialed_number(), transferData)
             }
-            // TODO3
-            // destChannel.dataWS =
+            destChannel.dataWS = appInterface._originateDataDict[channel.unique_id]
+            delete appInterface._originateDataDict[channel.unique_id]
         } else {
            /* Originate */
-            destChannel = channelCollection.getByName(event['DestChannel'])
-            // TODO 3 uuid
-            destChannel.setOriginateKey('dsfghjk')
+            destChannel = appInterface.channelCollection.getByName(event['DestChannel'])
+            destChannel.setOriginateKey(uuidv4())
             if (destChannel.extension){
-                // TODO 3
+                let originateData = appInterface._originateDict[event['DestUniqueid']] || {}
+                delete appInterface._originateDict[event['DestUniqueid']]
+                appInterface.newCall(destChannel, originateData.number, 'outgoing', originateData.data, 2, [destChannel.extension.flagWS], originateData.location, originateData.dialNumber, originateData.transferData)
             }
         }
     } catch (e){errorLog.error(e)}
@@ -250,7 +265,7 @@ function checkBridge(event) {
     try{
         if (event['Channel']){
             let uniqueTempID = getUniqueTempID(event)
-            bridgeCollection.checkBridge(event['DialStatus'], event['Channel'], uniqueTempID)
+            appInterface.bridgeCollection.checkBridge(event['DialStatus'], event['Channel'], uniqueTempID)
         }
     } catch (e){
         errorLog.error(e)
@@ -259,23 +274,22 @@ function checkBridge(event) {
 
 function enterBridge(event) {
     try {
-        // TODO 2
         let channel
-        let bridge = bridgeCollection.id_dict[event['BridgeUniqueid']]
+        let bridge = appInterface.bridgeCollection.id_dict[event['BridgeUniqueid']]
         if (bridge){
-            channel = channelCollection.getByName(event['Channel'])
+            channel = appInterface.channelCollection.getByName(event['Channel'])
             bridge.enterChannel(channel)
         } else {
-            bridge = bridgeCollection.linked_id_dict[event['Linkedid']]
+            bridge = appInterface.bridgeCollection.linked_id_dict[event['Linkedid']]
             if (!bridge){
-                bridge = bridgeCollection.destlinked_id_dict[event['Linkedid']]
+                bridge = appInterface.bridgeCollection.destlinked_id_dict[event['Linkedid']]
             }
             bridge.setBridgeID(event['BridgeUniqueid'])
         }
         // FOR API
-        channel = channelCollection.getByName(event['Channel'])
+        channel = appInterface.channelCollection.getByName(event['Channel'])
         if (channel.extension && event['ChannelState'] == '6'){
-            // TODO 3
+            appInterface.newCallState(channel, 3, [channel.extension.flagWS])
             channel.extension.setStatusWS('1')
         }
     } catch (e){
@@ -285,8 +299,8 @@ function enterBridge(event) {
 
 function leaveBridge(event) {
     try{
-        let bridge = bridgeCollection.id_dict[event['BridgeUniqueid']]
-        let channel = channelCollection.getByName(event['Channel'])
+        let bridge = appInterface.bridgeCollection.id_dict[event['BridgeUniqueid']]
+        let channel = appInterface.channelCollection.getByName(event['Channel'])
         bridge.leaveChannel(channel)
     } catch (e) {
         errorLog.error(e)
@@ -295,15 +309,16 @@ function leaveBridge(event) {
 
 function blindTransfer(event){
     try {
-        let channel = channelCollection.getByName(event['TransfereeChannel'])
+        let channel = appInterface.channelCollection.getByName(event['TransfereeChannel'])
         if (channel.trunk) {
             channel.blind_transfer_trunk = true
         } else {
-            // TODO 3
+            appInterface.updateCall(channel, event['Extension'], [channel.extension.flagWS], channel.dataWS)
+            appInterface.newCallState(channel, 2, [channel.extension.flagWS])
             channel.blind_transfer = true
         }
-        let supportChannel = channelCollection.getByName(event['TransfererChannel'])
-        let extension = extensionCollection.getByExten(event['Extension'])
+        let supportChannel = appInterface.channelCollection.getByName(event['TransfererChannel'])
+        let extension = appInterface.extensionCollection.getByExten(event['Extension'])
         let blindTransferSQL = "INSERT INTO transfers (target_channel_id, channel_support_id_1, transferee_extension_id, transfer_type) " +
             "VALUES ($1, $2, $3, $4)"
         backgroundQuery(blindTransferSQL, async()=>[await channel.id, await supportChannel.id, extension.db_id, 'BlindTransfer'])
@@ -318,10 +333,10 @@ function attendedTransfer(event) {
         let transfereeChannel = event['TransfereeChannel']
         let transferTargetChannel = event['TransferTargetChannel']
         if (!transfereeChannel) {
-            startChannel = channelCollection.getByName(transferTargetChannel)
-            supportChannel = channelCollection.getByName(event['OrigTransfererChannel'])
+            startChannel = appInterface.channelCollection.getByName(transferTargetChannel)
+            supportChannel = appInterface.channelCollection.getByName(event['OrigTransfererChannel'])
             supportChannel2 = supportChannel.extension.collection.getOtherChannel(supportChannel)
-            let bridge = bridgeCollection.initiator_dict[supportChannel.name]
+            let bridge = appInterface.bridgeCollection.initiator_dict[supportChannel.name]
             for (let channel of bridge.start_channel_list){
                 if (supportChannel.name != channel.name){
                     endChannel = channel
@@ -330,26 +345,26 @@ function attendedTransfer(event) {
             }
             typeTransfer = 'Attended Transfer Forward'
         } else if (!transferTargetChannel){
-            startChannel = channelCollection.getByName(transfereeChannel)
-            supportChannel = channelCollection.getByName(event['OrigTransfererChannel'])
+            startChannel = appInterface.channelCollection.getByName(transfereeChannel)
+            supportChannel = appInterface.channelCollection.getByName(event['OrigTransfererChannel'])
             supportChannel2 = supportChannel.extension.channels.getOtherChannel(supportChannel)
             endChannel = supportChannel2.bridge.channels.getOtherChannel(supportChannel2)
             typeTransfer = 'Attended Transfer Back'
         } else {
-            startChannel = channelCollection.getByName(transfereeChannel)
-            supportChannel = channelCollection.getByName(event['OrigTransfererChannel'])
+            startChannel = appInterface.channelCollection.getByName(transfereeChannel)
+            supportChannel = appInterface.channelCollection.getByName(event['OrigTransfererChannel'])
             supportChannel2 = supportChannel.extension.channels.getOtherChannel(transferTargetChannel)
-            endChannel = channelCollection.getByName(transferTargetChannel)
+            endChannel = appInterface.channelCollection.getByName(transferTargetChannel)
             typeTransfer = 'Attended Transfer'
         }
 
         // Если канал создан внутри астериска
         if (!startChannel.trunk){
-            // TODO 3
+            appInterface.updateCall(startChannel, endChannel.number, [startChannel.extension.flagWS,], endChannel.dataWS)
         }
         // Если канал создан внутри астериска
         if (!endChannel.trunk){
-            // TODO 3
+            appInterface.updateCall(endChannel, startChannel.number, [endChannel.extension.flagWS], startChannel.dataWS)
         }
         // Сохранение
         let AttendedTransferSQL = "INSERT INTO transfers (target_channel_id, transferee_channel_id, channel_support_id_1, channel_support_id_2,  transferee_extension_id, transfer_type) " +
@@ -359,13 +374,13 @@ function attendedTransfer(event) {
     } catch (e){
         errorLog.error(e)
         errorLog.error(event)
-        let startChannel = channelCollection.getByName(event['TransfereeChannel'])
-        let endChannel = channelCollection.getByName(event['TransferTargetChannel'])
+        let startChannel = appInterface.channelCollection.getByName(event['TransfereeChannel'])
+        let endChannel = appInterface.channelCollection.getByName(event['TransferTargetChannel'])
         if (!startChannel.trunk){
-            // TODO 3
+            appInterface.updateCall(startChannel, endChannel.number, [startChannel.extension.flagWS], endChannel.dataWS)
         }
         if (!endChannel.trunk){
-            // TODO 3
+            appInterface.updateCall(endChannel, startChannel.number, [endChannel.extension.flagWS], startChannel.dataWS)
         }
 
     }
@@ -374,10 +389,9 @@ function attendedTransfer(event) {
 async function lockAgent(event) {
     try {
         let result = parseChannelName(event['Interface'])
-        let extension = extensionCollection.getByExten(result['number'])
+        let extension = appInterface.extensionCollection.getByExten(result['number'])
         let channelName = event['DestChannel']
-        // TODO 1
-        let channel = channelCollection.getByName(channelName)
+        let channel = appInterface.channelCollection.getByName(channelName)
         extension.setStatusWS('101')
         if (channel){
             extension.setLock('AFK', await channel.id)
@@ -389,8 +403,7 @@ async function lockAgent(event) {
 
 function destroyBridge(event) {
     try{
-        // TODO 1
-        let bridge = bridgeCollection.id_dict[event['BridgeUniqueid']]
+        let bridge = appInterface.bridgeCollection.id_dict[event['BridgeUniqueid']]
         bridge.destroy()
     } catch (e){
         errorLog.error(e)
@@ -401,7 +414,7 @@ function destroyBridge(event) {
 /* Queues */
 function queueSummary(event) {
     try {
-        queueCollection.receivedQueue(event['Queue'])
+        appInterface.queueCollection.receivedQueue(event['Queue'])
     } catch (e) {
         errorLog.error(e)
     }
@@ -410,7 +423,7 @@ function queueSummary(event) {
 
 function queueComplete(event) {
     try {
-        queueCollection.requestAgentsFromAsterisk()
+        appInterface.queueCollection.requestAgentsFromAsterisk()
     } catch (e) {
         errorLog.error(e)
     }
@@ -418,7 +431,7 @@ function queueComplete(event) {
 
 async function queueAddAgent(event) {
     try {
-        let queue = queueCollection.nameDict[event['Queue']]
+        let queue = appInterface.queueCollection.nameDict[event['Queue']]
         if (queue){
             let agentNumber = parseChannelName(event['Name'])['number']
             let agent = queue.agentDict[agentNumber]
@@ -439,7 +452,7 @@ async function queueAddAgent(event) {
 
 async function queueAgentComplete(event) {
     try {
-        await queueCollection.loadFromDB()
+        await appInterface.queueCollection.loadFromDB()
     } catch (e) {
         errorLog.error(e)
     }
@@ -447,10 +460,10 @@ async function queueAgentComplete(event) {
 
 async function queueCallerAbandon(event) {
     try {
-        let queue = queueCollection.nameDict[event['Queue']]
+        let queue = appInterface.queueCollection.nameDict[event['Queue']]
         if (queue && queue.abandonWebhook){
             let postData = {'info': {}}
-            let channel = channelCollection.getByName(event['Channel'])
+            let channel = appInterface.channelCollection.getByName(event['Channel'])
             if (channel){
                 postData.info.channel = {
                     'number': channel.number,
@@ -466,10 +479,18 @@ async function queueCallerAbandon(event) {
                     }
                 }
             }
-            let url = queue.abandonWebhook['url']
-            let headers = queue.abandonWebhook['headers'] || {}
-            // TODO 3
-            // sendPost(url, postData, headers
+
+            const options = new URL(queue.abandonWebhook['url'])
+            const headers = queue.abandonWebhook['headers'] || {}
+            headers['Content-Type'] = 'application/json'
+            let connectionParam = {}
+            connectionParam.headers = headers
+            connectionParam.method = 'POST'
+            connectionParam.path = options.pathname
+            connectionParam.hostname = options.hostname
+            connectionParam.protocol = options.protocol
+
+            await sendRequest(connectionParam, JSON.stringify(postData))
         }
     } catch (e) {
         errorLog.error(e)
@@ -529,7 +550,6 @@ ami.on(Event('BridgeListComplete'), function (){})
 ami.on('ready', async function(){
     try{
         await extensionStateList()
-        await queueCollection.reload()
     } catch (e){
         console.log(e)
     }
@@ -537,8 +557,5 @@ ami.on('ready', async function(){
 });
 
 module.exports = {
-    channelCollection,
-    trunkCollection,
-    ruleCollection,
-    extensionCollection,
+    appInterface
 }

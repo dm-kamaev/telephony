@@ -1,13 +1,12 @@
 'use strict';
-var aio = require('asterisk.io'),
-    ami = null,   // see ami section
-    agi = null;   // see agi section
+var aio = require('asterisk.io')
 const asyncAGI = require('./asyncAGI')
 const { agiSwitch } = require('./agiSwitch')
-const { channelCollection } = require('./ami')
+const { appInterface } = require('./ami')
 
 
-agi = aio.agi(4573); // port and host
+
+const agi = aio.agi(4573); // port and host
 agi.on('error', function(err){
     throw err;
 });
@@ -37,7 +36,7 @@ agi.on('connection', async function(agiConnection){
     //await agiHandler.asyncCommand('ANSWER')
     //console.log(channelCollection.getByName(agiConnection.agi_channel))
 
-    let channel = channelCollection.getByName(agiConnection.agi_channel)
+    let channel = appInterface.channelCollection.getByName(agiConnection.agi_channel)
     if (agiConnection.agi_extension == '*78'){
         await agiConnection.asyncCommand('ANSWER')
         await agiConnection.asyncCommand('HANGUP')

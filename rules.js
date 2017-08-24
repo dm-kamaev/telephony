@@ -1,7 +1,9 @@
 "use strict";
-const { query, queryOne, backgroundQuery } = require('./db')
+const { query, queryOne, backgroundQuery, backg } = require('./db')
 const logicLog = require('logger')(module, 'logic.log')
 const errorLog = require('logger')(module, 'error.log')
+const { sendRequest, backgroundTask } = require('./utils')
+const { URL } = require('url')
 const moment = require('moment-timezone')
 
 class RuleCollection {
@@ -228,10 +230,52 @@ class Rule {
 
     async do(agiSession){
         if (this.value['caller_id_name']){
-            // TODO 3
+            await agiSession.agi.asyncCommand(`SET CALLERID ${this.value['caller_id_name']}`)
         } else {
             try {
-                // TODO 3 web hook
+                if (this.value.webhook){
+                    backgroundTask(async()=>{
+                        let postData = {"info": {
+                                "rule_run": {"id": this.id, "value": this.value}
+                        }}
+                        if (agiSession.channel) {
+                            postData.info.channel = {
+                                "number": agiSession.channel.number,
+                                "id": await agiSession.channel.id
+                            }
+
+                            if (agiSession.extension) {
+                                postData.info.extension = {"exten": agiSession.channel.extension.exten}
+                            }
+                            if (agiSession.channel.trunk){
+                                postData.info.channel.trunk = {
+                                    "name": agiSession.channel.trunk.name,
+                                    "id": agiSession.channel.trunk.trunk_id
+                                }
+                            }
+                        }
+                        if (agiSession.processedRules.length > 0){
+                            postData.info.processed_rules = []
+                            for (let runRule of agiSession.processedRules){
+                                postData.info.processed_rules.push({
+                                    "id": runRule.id,
+                                    "value": runRule.value
+                                })
+                            }
+                        }
+                        const options = new URL(this.value.webhook.url)
+                        const headers = this.value.headers || {}
+                        headers['Content-Type'] = 'application/json'
+                        let connectionParam = {}
+                        connectionParam.headers = headers
+                        connectionParam.method = 'POST'
+                        connectionParam.path = options.pathname
+                        connectionParam.hostname = options.hostname
+                        connectionParam.protocol = options.protocol
+
+                        await sendRequest(connectionParam, JSON.stringify(postData))
+                    })
+                }
             } catch (e){
                 errorLog.error(e)
             }
