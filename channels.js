@@ -1,5 +1,5 @@
 "use strict";
-const logicLog = require('logger')(module, 'logic.log')
+const logicLog = require('./logger')(module, 'logic.log')
 const { getStandardPhone, backgroundTask, sendRequest } = require('./utils')
 const { query, queryOne, backgroundQuery } = require('./db')
 const config = require('config');

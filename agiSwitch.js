@@ -1,5 +1,5 @@
 "use strict";
-const logicLog = require('logger')(module, 'logic.log')
+const logicLog = require('./logger')(module, 'logic.log')
 const { appInterface } = require('./ami')
 
 const TIMEOUT = 300
@@ -268,3 +268,5 @@ async function agiSwitch(agi, channel) {
 module.exports = {
     agiSwitch
 }
+
+BEGIN;INSERT INTO "telephony"."public"."switch_rules"  (id,value,"time_group_id","no_answer_rule_id","off_hours_rule_id") VALUES('6','{"command": "dial", "params": {"number": "upsale-call-center/9202", "timeout": 120}}','NULL','NULL','NULL')

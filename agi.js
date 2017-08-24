@@ -12,7 +12,7 @@ agi.on('error', function(err){
 });
 
 agi.on('listening', function(){
-    console.log('listening on port 14000');
+    console.log('listening on port 4573');
 });
 
 agi.on('close', function(){

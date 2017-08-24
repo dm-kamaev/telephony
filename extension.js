@@ -1,7 +1,7 @@
 "use strict";
 const { query, queryOne, backgroundQuery } = require('./db')
-const systemLog = require('logger')(module, 'system.log')
-const logicLog = require('logger')(module, 'logic.log')
+const systemLog = require('./logger')(module, 'system.log')
+const logicLog = require('./logger')(module, 'logic.log')
 const { ChannelCollection } = require('./channels')
 const { backgroundTask } = require('./utils')
 

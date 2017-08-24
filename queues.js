@@ -1,7 +1,7 @@
 "use strict";
 const { query, queryOne, backgroundQuery } = require('./db')
-const logicLog = require('logger')(module, 'logic.log')
-const errorLog = require('logger')(module, 'error.log')
+const logicLog = require('./logger')(module, 'logic.log')
+const errorLog = require('./logger')(module, 'error.log')
 
 class QueueCollection {
     constructor(ami){

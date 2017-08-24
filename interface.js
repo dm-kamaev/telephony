@@ -1,7 +1,7 @@
 "use strict";
 const wsc = require('./websockets')
-const wsLog = require('logger')(module, 'ws.log')
-const errorLog = require('logger')(module, 'error.log')
+const wsLog = require('./logger')(module, 'ws.log')
+const errorLog = require('./logger')(module, 'error.log')
 const config = require('config');
 const { backgroundTask } = require('./utils')
 const { TrunkCollection } = require('./trunk')

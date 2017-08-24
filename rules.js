@@ -1,7 +1,7 @@
 "use strict";
 const { query, queryOne, backgroundQuery, backg } = require('./db')
-const logicLog = require('logger')(module, 'logic.log')
-const errorLog = require('logger')(module, 'error.log')
+const logicLog = require('./logger')(module, 'logic.log')
+const errorLog = require('./logger')(module, 'error.log')
 const { sendRequest, backgroundTask } = require('./utils')
 const { URL } = require('url')
 const moment = require('moment-timezone')

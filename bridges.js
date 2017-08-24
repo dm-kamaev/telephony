@@ -1,5 +1,5 @@
 "use strict";
-const logicLog = require('logger')(module, 'logic.log')
+const logicLog = require('./logger')(module, 'logic.log')
 const { query, queryOne, backgroundQuery } = require('./db')
 const { ChannelCollection } = require('./channels')
 
