@@ -41,7 +41,7 @@ class QueueCollection {
             let queue = this.nameDict[row.name]
             if (queue) {
                 queue.id = row.id
-                if (row.abandonWebhook){
+                if (row.abandon_webhook){
                     queue.abandonWebhook = JSON.parse(row.abandon_webhook)
                 }
                 this.idDict[queue.id] = queue
@@ -73,7 +73,7 @@ class Queue {
         this.name = name
         this.agents = []
         this.id = null
-        this.abandonWebhook = new Object(null)
+        this.abandonWebhook = null
         this.queues = queues
         this.agentDict = new Object(null)
     }

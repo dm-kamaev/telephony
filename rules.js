@@ -145,7 +145,7 @@ class TimeGroup  {
             for (let period of timePeriod){
                 let timeStart = startWeek.clone().second(period['time_start'])
                 let timeEnd = startWeek.clone().second(period['time_end'])
-                if (timeStart <= momentNow <= timeEnd){
+                if (timeStart <= momentNow && momentNow <= timeEnd){
                     return true
                 }
             }

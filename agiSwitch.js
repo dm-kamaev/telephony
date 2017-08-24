@@ -60,6 +60,9 @@ class AgiSession {
     }
 
     extenEmpty(){
+        if (!this.exten){
+            return
+        }
         if (['', 's'].indexOf(this.exten) > -1){
             return true
         } else {
@@ -111,7 +114,7 @@ class AgiSession {
         const maxDigits = 3
         const timeout = 2000
         let result = await this.agi.asyncCommand(`GET DATA "/var/lib/asterisk/moh/gudok" ${timeout} ${maxDigits}`)
-        if (result.length == 3){
+        if (result && result[1].length == 3){
             this.exten = result[1]
         }
     }
@@ -268,5 +271,3 @@ async function agiSwitch(agi, channel) {
 module.exports = {
     agiSwitch
 }
-
-BEGIN;INSERT INTO "telephony"."public"."switch_rules"  (id,value,"time_group_id","no_answer_rule_id","off_hours_rule_id") VALUES('6','{"command": "dial", "params": {"number": "upsale-call-center/9202", "timeout": 120}}','NULL','NULL','NULL')
