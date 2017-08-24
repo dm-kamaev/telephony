@@ -61,7 +61,7 @@ class AgiSession {
 
     extenEmpty(){
         if (!this.exten){
-            return
+            return true
         }
         if (['', 's'].indexOf(this.exten) > -1){
             return true
