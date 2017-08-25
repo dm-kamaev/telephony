@@ -1,7 +1,7 @@
 "use strict";
 const { query, queryOne, backgroundQuery } = require('./db')
 const systemLog = require('./logger')(module, 'system.log')
-const logicLog = require('./logger')(module, 'logic.log')
+const logicLog = require('logger')(module, 'logic.log')
 const { ChannelCollection } = require('./channels')
 const { backgroundTask } = require('./utils')
 
@@ -179,10 +179,6 @@ class Extension {
             if (this.channels.collection.length < 2){
                 logicLog.info(`${this} UNLOCK`)
                 await this.setLock('OFF')
-                return true
-            } else {
-                logicLog.info(`${this} BREAK DIAL`)
-                return false
             }
         }
         return true
