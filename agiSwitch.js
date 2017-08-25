@@ -114,8 +114,8 @@ class AgiSession {
         const maxDigits = 3
         const timeout = 2000
         let result = await this.agi.asyncCommand(`GET DATA "/var/lib/asterisk/moh/gudok" ${timeout} ${maxDigits}`)
-        if (result && result[1].length == 3){
-            this.exten = result[1]
+        if (result && result['1'] && result['1'].toString().length == 3){
+            this.exten = result['1'].toString()
         }
     }
 
@@ -256,6 +256,7 @@ async function agiSwitch(agi, channel) {
             await agiSession.agi.asyncCommand(`SET CALLERID ${agiSession.channel.number}`)
         }
     }
+
 
     // Запрашиваем добавочный
     if (agiSession.extenEmpty() && agiSession.channel.trunk && agiSession.channel.trunk.waitExten) {
