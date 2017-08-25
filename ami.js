@@ -375,15 +375,20 @@ function attendedTransfer(event) {
     } catch (e){
         errorLog.error(e)
         errorLog.error(event)
-        let startChannel = appInterface.channelCollection.getByName(event['TransfereeChannel'])
-        let endChannel = appInterface.channelCollection.getByName(event['TransferTargetChannel'])
-        if (!startChannel.trunk){
-            appInterface.updateCall(startChannel, endChannel.number, [startChannel.extension.flagWS], endChannel.dataWS)
+        try {
+            errorLog.error(e)
+            errorLog.error(event)
+            let startChannel = appInterface.channelCollection.getByName(event['TransfereeChannel'])
+            let endChannel = appInterface.channelCollection.getByName(event['TransferTargetChannel'])
+            if (!startChannel.trunk){
+                appInterface.updateCall(startChannel, endChannel.number, [startChannel.extension.flagWS], endChannel.dataWS)
+            }
+            if (!endChannel.trunk){
+                appInterface.updateCall(endChannel, startChannel.number, [endChannel.extension.flagWS], startChannel.dataWS)
+            }
+        } catch (e){
+            errorLog.error(e)
         }
-        if (!endChannel.trunk){
-            appInterface.updateCall(endChannel, startChannel.number, [endChannel.extension.flagWS], startChannel.dataWS)
-        }
-
     }
 }
 

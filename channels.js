@@ -141,9 +141,9 @@ class Channel{
             this.call_number = getStandardPhone(exten)
         }
 
-        if (true || this.trunk){
-            if (true || this.trunk.tracking && !this.incoming){
-                if (true || ['74959843131', '79255343606', '79161387884'].indexOf(self.number) < 0 ){
+        if (this.trunk){
+            if (this.trunk.tracking && !this.incoming){
+                if (['74959843131', '79255343606', '79161387884'].indexOf(self.number) < 0 ){
                     let connectParam = {
                         hostname: config.site.host,
                         protocol: config.site.schema + ':',
