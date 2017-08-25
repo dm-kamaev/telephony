@@ -290,7 +290,7 @@ function enterBridge(event) {
         // FOR API
         channel = appInterface.channelCollection.getByName(event['Channel'])
         if (channel.extension && event['ChannelState'] == '6'){
-            appInterface.newCallState(channel, 3, [channel.extension.flagWS])
+            appInterface.newCallState(channel, 1, [channel.extension.flagWS])
             channel.extension.setStatusWS('1')
         }
     } catch (e){
