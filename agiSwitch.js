@@ -193,8 +193,7 @@ class AgiSession {
         }
 
         logicLog.info(`${this} Dial ${asterTrunkStr}/${number}, ${timeout}, ${opts}`)
-        //await this.agi.asyncCommand(`EXEC Dial ${asterTrunkStr}/${number}, "${timeout}"${opts}`)
-        await this.agi.asyncCommand(`EXEC Dial ${asterTrunkStr}/${number},"${10}"${opts}`)
+        await this.agi.asyncCommand(`EXEC Dial ${asterTrunkStr}/${number}, "${timeout}"${opts}`)
         let result = await this.agi.asyncCommand('GET VARIABLE DIALSTATUS')
         return result['2']
     }
