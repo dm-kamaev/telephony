@@ -143,7 +143,7 @@ async function addChannel(event, channel_id) {
                 trunk = appInterface.trunkCollection.getByChannelName('SIP/' + event['Exten'])
             }
             if (trunk == null) {
-                trunk = appInterface.trunkCollection.getByChannelName('SIP/' + event['Exten'])
+                trunk = appInterface.trunkCollection.getByChannelName(event['Channel'].split('-')[0])
             }
             if (trunk) {
                 number = event['CallerIDNum']
