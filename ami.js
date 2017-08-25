@@ -177,6 +177,7 @@ function closeChannel(event) {
         }
     } catch (e){
         errorLog.error(e)
+        errorLog.error(event)
     }
 }
 
