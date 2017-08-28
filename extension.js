@@ -226,10 +226,11 @@ class Extension {
 
         this._DND = value
         logicLog.info(`Update DND ${this}`)
+        const currentDate = new Date()
         await queryOne(
-            "INSERT INTO extension_dnd (extension, value) " +
-            `VALUES ('${this.exten}', ${value})`
-        )
+            "INSERT INTO extension_dnd (extension, value, datetime) " +
+            `VALUES ($1, $2, $3)`
+        , [this.exten, value, currentDate])
         await this.ami.asyncAction('DBPut', {
             Family: 'CUSTOM_DND',
             Key: this.exten,
@@ -243,18 +244,19 @@ class Extension {
         if (this._lock_type == value){
             return
         }
+        const currentDate = new Date()
         channel_id = channel_id || null
         this._lock = (LOCK_TYPE[value]) ? true : false
         this._lock_type = value
         logicLog.info(`Update Lock ${this}`)
-        let setLockSQL = "INSERT INTO extension_lock (extension, value, type, channel_id) " +
-            "VALUES ($1, $2, $3, $4)"
-        backgroundQuery(setLockSQL, ()=>[this.exten, value, this._lock_type, channel_id])
+        let setLockSQL = "INSERT INTO extension_lock (extension, value, type, channel_id, datetime) " +
+            "VALUES ($1, $2, $3, $4, $5)"
+        backgroundQuery(setLockSQL, ()=>[this.exten, value, this._lock_type, channel_id, currentDate])
         backgroundTask([
             async ()=>{await this.ami.asyncAction('DBPut', {
                         Family: 'CUSTOM_LOCK',
                         Key: this.exten,
-                        Val: this._lock_type
+                        Val: this._lock_type,
                     })},
             async ()=>[await this.update_pause()]
         ])
