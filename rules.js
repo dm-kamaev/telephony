@@ -229,69 +229,73 @@ class Rule {
     }
 
     async do(agiSession){
-        if (this.value['caller_id_name']){
-            await agiSession.agi.asyncCommand(`SET CALLERID ${this.value['caller_id_name']}`)
-        } else {
-            try {
-                if (this.value.webhook){
-                    backgroundTask(async()=>{
-                        let postData = {"info": {
-                                "rule_run": {"id": this.id, "value": this.value}
-                        }}
-                        if (agiSession.channel) {
-                            postData.info.channel = {
-                                "number": agiSession.channel.number,
-                                "id": await agiSession.channel.id
-                            }
+        try {
+            if (this.value['caller_id_name']){
+               await agiSession.agi.asyncCommand(`SET CALLERID ${this.value['caller_id_name']}`)
+            }
+            if (this.value.webhook){
+                backgroundTask(async()=>{
+                    let postData = {"info": {
+                            "rule_run": {"id": this.id, "value": this.value}
+                    }}
+                    if (agiSession.channel) {
+                        postData.info.channel = {
+                            "number": agiSession.channel.number,
+                            "id": await agiSession.channel.id
+                        }
 
-                            if (agiSession.extension) {
-                                postData.info.extension = {"exten": agiSession.channel.extension.exten}
-                            }
-                            if (agiSession.channel.trunk){
-                                postData.info.channel.trunk = {
-                                    "name": agiSession.channel.trunk.name,
-                                    "id": agiSession.channel.trunk.trunk_id
-                                }
+                        if (agiSession.extension) {
+                            postData.info.extension = {"exten": agiSession.channel.extension.exten}
+                        }
+                        if (agiSession.channel.trunk){
+                            postData.info.channel.trunk = {
+                                "name": agiSession.channel.trunk.name,
+                                "id": agiSession.channel.trunk.trunk_id
                             }
                         }
-                        if (agiSession.processedRules.length > 0){
-                            postData.info.processed_rules = []
-                            for (let runRule of agiSession.processedRules){
-                                postData.info.processed_rules.push({
-                                    "id": runRule.id,
-                                    "value": runRule.value
-                                })
-                            }
+                    }
+                    if (agiSession.processedRules.length > 0){
+                        postData.info.processed_rules = []
+                        for (let runRule of agiSession.processedRules){
+                            postData.info.processed_rules.push({
+                                "id": runRule.id,
+                                "value": runRule.value
+                            })
                         }
-                        const options = new URL(this.value.webhook.url)
-                        const headers = this.value.headers || {}
-                        headers['Content-Type'] = 'application/json'
-                        let connectionParam = {}
-                        connectionParam.headers = headers
-                        connectionParam.method = 'POST'
-                        connectionParam.path = options.pathname
-                        connectionParam.hostname = options.hostname
-                        connectionParam.protocol = options.protocol
+                    }
+                    const options = new URL(this.value.webhook.url)
+                    const headers = this.value.headers || {}
+                    headers['Content-Type'] = 'application/json'
+                    let connectionParam = {}
+                    connectionParam.headers = headers
+                    connectionParam.method = 'POST'
+                    connectionParam.path = options.pathname
+                    connectionParam.hostname = options.hostname
+                    connectionParam.protocol = options.protocol
 
-                        await sendRequest(connectionParam, JSON.stringify(postData))
-                    })
-                }
-            } catch (e){
-                errorLog.error(e)
+                    await sendRequest(connectionParam, JSON.stringify(postData))
+                })
             }
-            switch (this.value.command){
-                case 'dial':
-                    return await agiSession.dial(this.value.params)
-                case 'queue':
-                    return await agiSession.queue(this.value.params)
-                case 'playback':
-                    return await agiSession.playback(this.value.params)
-                default:
-                    logicLog.error(`Unknown type command in rule ${JSON.stringify(this)}`)
-                    throw new Error('Unknown type command in rule')
-            }
+        } catch (e){
+            errorLog.error(e)
         }
-
+        switch (this.value.command){
+            case 'call':
+                return await agiSession.call(this.value.params)
+            case 'dial':
+                if (this.value.params && this.value.params.force){
+                    let {trunk: asterTrunkStr, number, timeout, music_class} = this.value.params
+                    return await agiSession.call({asterTrunkStr, number, timeout, music_class})
+                }
+                return await agiSession.dial(this.value.params)
+            case 'queue':
+                return await agiSession.queue(this.value.params)
+            case 'playback':
+                return await agiSession.playback(this.value.params)
+            default:
+                logicLog.error(`Unknown type command in rule ${JSON.stringify(this)}`)
+                throw new Error('Unknown type command in rule')
+        }
     }
 
     checkTime (){
