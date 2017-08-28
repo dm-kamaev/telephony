@@ -12,6 +12,7 @@ const pool = new Pool({
 })
 
 async function queryOne(querySQL, args) {
+    systemLog.info('QUERY ' + querySQL)
     systemLog.info('idle count' + pool.idleCount)
     systemLog.info('total count' + pool.totalCount)
     const client = await pool.connect()
@@ -30,6 +31,7 @@ async function queryOne(querySQL, args) {
 }
 
 function backgroundQuery(querySQL, getArgs) {
+    systemLog.info('QUERY ' + querySQL)
     systemLog.info('idle count' + pool.idleCount)
     systemLog.info('total count' + pool.totalCount)
     pool.connect(async(err, client, done) => {
@@ -52,6 +54,7 @@ function backgroundQuery(querySQL, getArgs) {
 }
 
 async function query(querySQL, args) {
+    systemLog.info('QUERY ' + querySQL)
     systemLog.info('idle count' + pool.idleCount)
     systemLog.info('total count' + pool.totalCount)
     const client = await pool.connect()
