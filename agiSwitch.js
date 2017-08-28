@@ -1,5 +1,7 @@
 "use strict";
 const logicLog = require('./logger')(module, 'logic.log')
+const errorLog = require('./logger')(module, 'error.log')
+const { backgroundQuery } = require('./db')
 const { appInterface } = require('./ami')
 
 const TIMEOUT = 300
@@ -101,6 +103,13 @@ class AgiSession {
                 CONTINUE
         */
         status = status.toUpperCase()
+        try {
+            const currentDate = new Date()
+            let saveRunRuleSQL = "INSERT INTO rule_run (rule_id, channel_id, previous_result, datetime) VALUES ($1, $2, $3, $4)"
+            backgroundQuery(saveRunRuleSQL, async ()=>[null, await this.channel.id, status, currentDate])
+        } catch (e){
+            errorLog.error(e)
+        }
         let actions = completionActionDict[status]
         if (actions){
             for (let action of actions){
@@ -228,11 +237,11 @@ class AgiSession {
 
     async router(){
         logicLog.info(`${this} START SWITCH - EXTEN ${this.exten}`)
-        // Звонок инициирован внутри телефонии
+        // Звонок инициирован НЕ внутри телефонии
         if (this.channel.trunk){
             return await this.switchIn()
         }
-        // Звонок инициирован НЕ внутри телефонии
+        // Звонок инициирован внутри телефонии
         return await this.switchOut()
     }
 

@@ -1,5 +1,5 @@
 "use strict";
-const { query, queryOne, backgroundQuery, backg } = require('./db')
+const { query, queryOne, backgroundQuery } = require('./db')
 const logicLog = require('./logger')(module, 'logic.log')
 const errorLog = require('./logger')(module, 'error.log')
 const { sendRequest, backgroundTask } = require('./utils')
