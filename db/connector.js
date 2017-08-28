@@ -9,6 +9,7 @@ const pool = new Pool({
     database: config.db.database,
     password: config.db.password,
     port: 5432,
+    idleTimeoutMillis: 1000*5,
 })
 
 async function queryOne(querySQL, args) {
@@ -17,7 +18,7 @@ async function queryOne(querySQL, args) {
     systemLog.info('total count' + pool.totalCount)
     const client = await pool.connect()
     try {
-        const res = await pool.query(querySQL, args)
+        const res = await client.query(querySQL, args)
         if (res.rowCount == 0) {
             return null
         }
@@ -32,8 +33,8 @@ async function queryOne(querySQL, args) {
 
 function backgroundQuery(querySQL, getArgs) {
     systemLog.info('QUERY ' + querySQL)
-    systemLog.info('idle count' + pool.idleCount)
-    systemLog.info('total count' + pool.totalCount)
+    systemLog.info('idle count  ' + pool.idleCount)
+    systemLog.info('total count ' + pool.totalCount)
     pool.connect(async(err, client, done) => {
         try {
             if (err) {
@@ -59,7 +60,7 @@ async function query(querySQL, args) {
     systemLog.info('total count' + pool.totalCount)
     const client = await pool.connect()
     try {
-        const res = await pool.query(querySQL, args)
+        const res = await client.query(querySQL, args)
         if (res.rowCount == 0) {
             return null
         }
