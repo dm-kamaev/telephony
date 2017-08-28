@@ -102,6 +102,7 @@ async function loadExtensions(events) {
 
     // Handle change status from AMI
     ami.on(Event('ExtensionStatus'), handlerExtension)
+    appInterface.emitter.emit('CollectionLoaded')
 }
 
 
@@ -516,42 +517,46 @@ ami.on('error', function(err){
 });
 
 // Channel
-ami.on(Event('Newchannel'), addChannel)
-ami.on(Event('Hangup'), closeChannel)
-ami.on(Event('Hold'), holdChannel)
-ami.on(Event('Unhold'), unholdChannel)
-ami.on(Event('Newstate'), newStateChannel)
-ami.on(Event('AgentRingNoAnswer'), lockAgent)
+appInterface.emitter.once('CollectionLoaded', function () {
+    logicLog.info('start AMI event handling')
+    ami.on(Event('Newchannel'), addChannel)
+    ami.on(Event('Hangup'), closeChannel)
+    ami.on(Event('Hold'), holdChannel)
+    ami.on(Event('Unhold'), unholdChannel)
+    ami.on(Event('Newstate'), newStateChannel)
+    ami.on(Event('AgentRingNoAnswer'), lockAgent)
 
-// Bridge
-ami.on(Event('DialBegin'), addBridge)
-ami.on(Event('DialEnd'), checkBridge)
-ami.on(Event('BridgeEnter'), enterBridge)
-ami.on(Event('BridgeLeave'), leaveBridge)
-ami.on(Event('BridgeDestroy'), destroyBridge)
+    // Bridge
+    ami.on(Event('DialBegin'), addBridge)
+    ami.on(Event('DialEnd'), checkBridge)
+    ami.on(Event('BridgeEnter'), enterBridge)
+    ami.on(Event('BridgeLeave'), leaveBridge)
+    ami.on(Event('BridgeDestroy'), destroyBridge)
 
-// Close zombie channel
-ami.on(Event('HangupRequest'), function () {})
-ami.on(Event('SoftHangupRequest'), function () {})
+    // Close zombie channel
+    ami.on(Event('HangupRequest'), function () {})
+    ami.on(Event('SoftHangupRequest'), function () {})
 
-// Transfers
-ami.on(Event('BlindTransfer'), blindTransfer)
-ami.on(Event('AttendedTransfer'), attendedTransfer)
+    // Transfers
+    ami.on(Event('BlindTransfer'), blindTransfer)
+    ami.on(Event('AttendedTransfer'), attendedTransfer)
+
+    // Queue
+    ami.on(Event('QueueCallerAbandon'), queueCallerAbandon)
+
+    // Restore collection
+    ami.on(Event('CoreShowChannel'), function (){})
+    ami.on(Event('CoreShowChannelsComplete'), function (){})
+    ami.on(Event('BridgeListItem'), function (){})
+    ami.on(Event('BridgeInfoChannel'), function (){})
+    ami.on(Event('BridgeListComplete'), function (){})
+})
 
 // Queue
 ami.on(Event('QueueSummary'), queueSummary)
 ami.on(Event('QueueSummaryComplete'), queueComplete)
 ami.on(Event('QueueMember'), queueAddAgent)
 ami.on(Event('QueueStatusComplete'), queueAgentComplete)
-ami.on(Event('QueueCallerAbandon'), queueCallerAbandon)
-
-// Restore collection
-ami.on(Event('CoreShowChannel'), function (){})
-ami.on(Event('CoreShowChannelsComplete'), function (){})
-ami.on(Event('BridgeListItem'), function (){})
-ami.on(Event('BridgeInfoChannel'), function (){})
-ami.on(Event('BridgeListComplete'), function (){})
-
 
 ami.on('ready', async function(){
     try{

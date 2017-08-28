@@ -4,7 +4,7 @@
 const WebSocket = require('ws');
 
 function WebSocketClient(){
-	this.autoReconnectInterval = 2000*1000;	// ms
+	this.autoReconnectInterval = 2000*10;	// ms
 }
 
 WebSocketClient.prototype.open = function(url){

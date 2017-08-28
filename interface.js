@@ -10,6 +10,8 @@ const { ChannelCollection } = require('./channels')
 const { QueueCollection } = require('./queues')
 const { RuleCollection } = require('./rules')
 const { BridgeCollection } = require('./bridges')
+const EventEmitter = require('events');
+class InterfaceEmitter extends EventEmitter {}
 
 
 
@@ -24,6 +26,8 @@ const CALL_STATE = {
 
 class AppInterface {
     constructor(ami){
+        // Event emmiter
+        this.emitter = new InterfaceEmitter()
         // AMI
         this.ami = ami
         // Collection
@@ -42,6 +46,9 @@ class AppInterface {
         this._stackWSMessage = []
         this.wsc = wsc
         wsc.appInterface = this
+        this.emitter.once('CollectionLoaded', function () {
+            wsc.open(config.ws.address);
+        })
         this._clientFlag = config.ws.clientFlag
         this._serverFlag = config.ws.serverFlag
 

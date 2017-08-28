@@ -1,12 +1,14 @@
 "use strict";
 const config = require('config');
 const WebSocketClient = require('./websockets_client')
+const logicLog = require('../logger')(module, 'logic.log')
 
 
 const wsc = new WebSocketClient();
-wsc.open(config.ws.address);
+
 
 wsc.onopen = function() {
+    logicLog.info('start WS working')
     this.send(JSON.stringify({'Type': 'Request', 'Name': 'SpecialClient', 'Key': config.ws.authKey}));
 };
 
