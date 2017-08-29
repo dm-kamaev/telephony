@@ -13,7 +13,7 @@ wsc.onopen = function() {
 };
 
 wsc.onmessage = function(message) {
-    if (this.appInterface !== null){
+    if (this.appInterface){
         this.appInterface.router(message)
     }
 };

@@ -49,6 +49,7 @@ class AppInterface {
         this.emitter.once('CollectionLoaded', function () {
             wsc.open(config.ws.address);
         })
+
         this._clientFlag = config.ws.clientFlag
         this._serverFlag = config.ws.serverFlag
 

@@ -183,24 +183,40 @@ function closeChannel(event) {
 }
 
 function holdChannel(event) {
-    let channel = appInterface.channelCollection.getByName(event['Channel'])
-    channel.setHold(true)
-    if (channel.extension){
-        appInterface.newCallState(channel, 5, [channel.extension.flagWS])
+    try {
+        let channel = appInterface.channelCollection.getByName(event['Channel'])
+        channel.setHold(true)
+        if (channel.extension) {
+            appInterface.newCallState(channel, 5, [channel.extension.flagWS])
+        }
+    } catch (e){
+        errorLog.error(event)
+        errorLog.error(e)
     }
 }
 
 function unholdChannel(event) {
-    let channel = appInterface.channelCollection.getByName(event['Channel'])
-    channel.setHold(false)
-    if (channel.extension){
-        appInterface.newCallState(channel, convertChannelStatus(event['ChannelState']), [channel.extension.flagWS])
+    try {
+        let channel = appInterface.channelCollection.getByName(event['Channel'])
+        channel.setHold(false)
+        if (channel.extension){
+            appInterface.newCallState(channel, convertChannelStatus(event['ChannelState']), [channel.extension.flagWS])
+        }
+    } catch (e){
+        errorLog.error(event)
+        errorLog.error(e)
     }
+
 }
 
 function newStateChannel(event) {
-    let channel = appInterface.channelCollection.getByName(event['Channel'])
-    channel.newState(event['ChannelState'])
+    try {
+        let channel = appInterface.channelCollection.getByName(event['Channel'])
+        channel.newState(event['ChannelState'])
+    } catch (e){
+        errorLog.error(event)
+        errorLog.error(e)
+    }
 }
 
 /* Channels End */
