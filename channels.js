@@ -143,7 +143,7 @@ class Channel{
 
         if (this.trunk){
             if (this.trunk.tracking && !this.incoming){
-                if (['74959843131', '79255343606', '79161387884'].indexOf(self.number) < 0 ){
+                if (['74959843131', '79255343606', '79161387884'].indexOf(this.number) < 0 ){
                     let connectParam = {
                         hostname: config.site.host,
                         protocol: config.site.schema + ':',

@@ -280,8 +280,6 @@ class Rule {
             errorLog.error(e)
         }
         switch (this.value.command){
-            case 'call':
-                return await agiSession.call(this.value.params)
             case 'dial':
                 if (this.value.params && this.value.params.force){
                     let {trunk: asterTrunkStr, number, timeout, music_class} = this.value.params
