@@ -275,7 +275,7 @@ class Channel{
     }
 
     setIncoming(value){
-        if (['', 's'].indexOf(value)){
+        if (['', 's'].indexOf(value) > -1){
             this._incoming = true
         } else {
             this._incoming = false
