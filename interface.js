@@ -11,6 +11,7 @@ const { QueueCollection } = require('./queues')
 const { RuleCollection } = require('./rules')
 const { BridgeCollection } = require('./bridges')
 const EventEmitter = require('events');
+const schedule = require('./schedule')
 class InterfaceEmitter extends EventEmitter {}
 
 
@@ -46,8 +47,9 @@ class AppInterface {
         this._stackWSMessage = []
         this.wsc = wsc
         wsc.appInterface = this
-        this.emitter.once('CollectionLoaded', function () {
+        this.emitter.once('CollectionLoaded', ()=> {
             wsc.open(config.ws.address);
+            schedule(this)
         })
 
         this._clientFlag = config.ws.clientFlag
@@ -55,35 +57,41 @@ class AppInterface {
 
         // Temp containers for reload
         this.reloadedExtension = []
+
     }
 
     router(data){
-        let parseData = JSON.parse(data)
-        if (parseData['Type'] == 'Event' && parseData['Name'] == 'NewMessage'){
-            let message = JSON.parse(parseData['Data']['Message'])
-            switch (message['Name']){
-                case 'GetExtensions':
-                    this.getExtensions(message, parseData['Data'].Sender, message.RequestID)
-                    break
-                case 'Originate':
-                    this.originate(message, parseData['Data'].Sender, message.RequestID)
-                    break
-                case 'SetLock':
-                    this.setLock(message, parseData['Data'].Sender, message.RequestID)
-                    break
-                case 'ReloadMainSettings':
-                    // TODO
-                    break
-                case 'UpdateCall':
-                    this.updateCall(message, parseData['Data'].Sender, message.RequestID)
-                    break
-                case 'SetData':
-                    this.setData(message, parseData['Data'].Sender, message.RequestID)
-                    break
-                case 'Monitor':
-                    let monitorMessage = {'Type': 'Request', 'Name': 'Monitor', 'Message': this.monitor()}
-                    this._sendWS(monitorMessage)
+        try {
+            let parseData = JSON.parse(data)
+            if (parseData['Type'] == 'Event' && parseData['Name'] == 'NewMessage') {
+                let message = JSON.parse(parseData['Data']['Message'])
+                switch (message['Name']) {
+                    case 'GetExtensions':
+                        this.getExtensions(message, parseData['Data'].Sender, message.RequestID)
+                        break
+                    case 'Originate':
+                        this.originate(message, parseData['Data'].Sender, message.RequestID)
+                        break
+                    case 'SetLock':
+                        this.setLock(message, parseData['Data'].Sender, message.RequestID)
+                        break
+                    case 'ReloadMainSettings':
+                        // TODO
+                        break
+                    case 'UpdateCall':
+                        this.updateCall(message, parseData['Data'].Sender, message.RequestID)
+                        break
+                    case 'SetData':
+                        this.setData(message, parseData['Data'].Sender, message.RequestID)
+                        break
+                    case 'Monitor':
+                        let monitorMessage = {'Type': 'Request', 'Name': 'Monitor', 'Message': this.monitor()}
+                        this._sendWS(monitorMessage)
+                }
             }
+        } catch (e){
+            errorLog.error(e)
+            errorLog.error(data)
         }
     }
 

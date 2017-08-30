@@ -170,8 +170,8 @@ class Channel{
         return `- Channel ${this.name} | Incoming ${this.incoming} | Trunk ${this.trunk} | Called Number ${this.call_number} | Data WS ${JSON.stringify(this.dataWS)} | DB ID ${this._id}`
     }
 
-    async close(reason){
-        this._close_in_db(reason)
+    async close(reason, closingTime){
+        this._close_in_db(reason, closingTime)
         for (let collection of this.collections){
             await collection.remove(this)
         }
@@ -336,12 +336,12 @@ class Channel{
         backgroundQuery(setBeginRingingSQL, async ()=> [currentDate, await this.id])
     }
 
-    _close_in_db(reason){
-        let currentDate = new Date()
+    _close_in_db(reason, closingTime){
+        closingTime = closingTime || new Date()
         backgroundQuery(
             'UPDATE channels SET "end"=$1, reason_h = $2, reason_h_code = $3 ' +
             "WHERE id=$4"
-        ,async ()=>[currentDate, reason.txt, reason.code, await this.id])
+        ,async ()=>[closingTime, reason.txt, reason.code, await this.id])
     }
 
     async createInDB(){

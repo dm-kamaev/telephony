@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS bridges (
 
 CREATE TABLE IF NOT EXISTS bridges_channels (
 
+    id serial PRIMARY KEY,
     bridge_id INTEGER,
     channel_id INTEGER,
     "begin" TIMESTAMP,
