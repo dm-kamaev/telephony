@@ -104,7 +104,7 @@ async function closeHoverChannel(appInterface){
                                                                       'SELECT channel_id ' +
                                                                       'FROM bridges_channels ' +
                                                                       `WHERE id IN ${arraySQL} AND ` +
-                                                                      "(INTERVAL '1206 HOURS' + begin) > NOW()) " +
+                                                                      "(INTERVAL '6 HOURS' + begin) > NOW()) " +
                                                                     'GROUP BY channel_id ' +
                                                                 ') AS id_bridge_channels' +
                                           ') AND ' +

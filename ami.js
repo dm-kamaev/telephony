@@ -159,7 +159,8 @@ async function addChannel(event, channel_id) {
         } else {
             await channel.createInDB()
             let today = new Date()
-            let recordPath = `${today.getFullYear()}/${today.getMonth()}/${today.getDate()}/`
+            let recordPath = `${today.getFullYear()}/${today.getMonth()+1}/${today.getDate()}/`
+            console.log(recordPath)
             ami.action("MixMonitor", {'Channel': event['Channel'], 'File': `${recordPath}${channel.id}.wav`})
             logicLog.info(`Created ${channel}`)
         }
