@@ -76,7 +76,7 @@ class AppInterface {
                         this.setLock(message, parseData['Data'].Sender, message.RequestID)
                         break
                     case 'ReloadMainSettings':
-                        // TODO
+                        this.reloadMainSettings()
                         break
                     case 'UpdateCall':
                         this.updateCall(message, parseData['Data'].Sender, message.RequestID)
@@ -147,8 +147,12 @@ class AppInterface {
 
     // API WS methods
     async reloadMainSettings(){
-        await this._loadLocalCollection()
-        await this._loadRemoteCollection()
+        try {
+            await this._loadLocalCollection()
+            await this._loadRemoteCollection()
+        } catch (e){
+            errorLog.info(e)
+        }
     }
 
     getExtensions(message, sender=null, requestId=null){
