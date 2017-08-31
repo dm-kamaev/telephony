@@ -457,16 +457,8 @@ async function queueAddAgent(event) {
         let queue = appInterface.queueCollection.nameDict[event['Queue']]
         if (queue){
             let agentNumber = parseChannelName(event['Name'])['number']
-            let agent = queue.agentDict[agentNumber]
-            if (agent){
-                if (agent.penalty != event['penalty']){
-                    agent.penalty = event['Penalty']
-                    logicLog.info(`Asterisk update penalty ${event['Penalty']} - Agent ${agent.number} Queue ${queue.name}`)
-                }
-            } else {
-                await queue._addAgent(agentNumber, event['Penalty'])
-                logicLog.info(`Agent ${agentNumber} Queue ${queue.name} received from Asterisk Penalty ${event['Penalty']}`)
-            }
+            queue.asteriskAgent[agentNumber] = {'penalty': event['penalty'], 'extension': agentNumber}
+            logicLog.info(`Agent ${agentNumber} Queue ${queue.name} received from Asterisk Penalty ${event['Penalty']}`)
         }
     } catch (e) {
         errorLog.error(e)

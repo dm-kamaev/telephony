@@ -64,6 +64,9 @@ class QueueCollection {
     }
 
     reload(){
+        this.collection = []
+        this.nameDict = new Object(null)
+        this.idDict = new Object(null)
         this.ami.action('QueueSummary')
     }
 }
@@ -76,10 +79,10 @@ class Queue {
         this.abandonWebhook = null
         this.queues = queues
         this.agentDict = new Object(null)
+        this.asteriskAgent = new Object(null)
     }
 
     async _reloadAgents(){
-        let tempAgents = this.agents.slice(0)
         let getAgentsSQL = "SELECT e.extension, qa.penalty, qa.id " +
                 "FROM queue_agents as qa " +
                 "INNER JOIN extensions as e ON e.id = qa.extension_id " +
@@ -87,27 +90,31 @@ class Queue {
         let rows = await query(getAgentsSQL, [this.id])
         if (rows) {
             for (let row of rows){
-                let agent = this.agentDict[row.extension]
-                if (agent){
-                    agent.id = row.id
-                    tempAgents.splice(tempAgents.indexOf(agent), 1)
+                // Если есть в астериске сравниваем параметры
+                if (this.asteriskAgent[row.extension]){
+                    logicLog.info(`Agent ${row.extension} Queue ${this.name} already exist`)
+                    let agent = await this._addAgent(row.extension, row.penalty, row.id, false)
+                    delete this.asteriskAgent[row.extension]
                     await this._compareAgent(agent, row.penalty)
+                // Создаем в астериске
                 } else {
                     logicLog.info(`Agent ${row.extension} Queue ${this.name} loaded from Database`)
-                    await this._addAgent(row.extension, row.penalty, row.id)
+                    await this._addAgent(row.extension, row.penalty, row.id, true)
+
                 }
             }
         }
-        await this._removeAgents(tempAgents)
+        // Удаляем всех несуществующих агентов в бд из астериска
+        await this._removeAgents(this.asteriskAgent)
     }
 
     async _removeAgents(agents){
-        for (let agent of agents){
+        for (let number in agents){
             await this.queues.ami.asyncAction('QueueRemove', {
                 'Queue': this.name,
-                'Interface': 'SIP/' + agent.number
+                'Interface': 'SIP/' + number
             })
-            logicLog.info(`Agents ${agent.number} Queue ${this.name} remove from Asterisk`)
+            logicLog.info(`Agents ${number} Queue ${this.name} remove from Asterisk`)
         }
         logicLog.info(`Reloaded Queue ${this.name} finished`)
     }
@@ -123,12 +130,12 @@ class Queue {
         }
     }
 
-    async _addAgent(number, penalty, id){
+    async _addAgent(number, penalty, id, needCreateAsterisk){
         id = id || null
         let agent = new Agent(number, penalty, id)
         this.agents.push(agent)
         this.agentDict[agent.number] = agent
-        if (id){
+        if (needCreateAsterisk){
             await this.queues.ami.asyncAction('QueueAdd', {
                 'Queue': this.name,
                 'Interface': 'SIP/' + agent.number,
@@ -137,6 +144,7 @@ class Queue {
             })
             logicLog.info(`Agents ${agent.number} add to Queue ${this.name} Penalty ${agent.penalty}`)
         }
+        return agent
     }
 
 
