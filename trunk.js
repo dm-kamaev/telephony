@@ -44,7 +44,7 @@ class TrunkCollection {
 
 class Trunk {
     constructor(data){
-        let {trunk_id, location_id, t_name, main, default_rule_id, try_switch_in, wait_exten, l_name, number, tracking} = data
+        let {id: trunk_id, location_id, t_name, main, default_rule_id, try_switch_in, wait_exten, l_name, number, tracking} = data
         this.trunk_id = trunk_id
         this.location_id = location_id
         this.name = t_name
