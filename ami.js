@@ -26,6 +26,7 @@ ami.appInterface = appInterface
 
 const re_number = /^(PJ)?SIP\/((:?[^\/]+)\/)?(:?\w+)/g
 const re_voxlink = /^(:?IAX2\/voxlink)-/g
+const re_trunk = /^(:?PJ)?(SIP\/.+)-[^-]+/g
 
 function getUniqueTempID(event) {
     let linkedID = event['Linkedid']
@@ -51,6 +52,14 @@ function parseVoxlinkChannel(channelName) {
         return { trunk: parseData[1]}
     } else {
         return null
+    }
+}
+
+function parseTrunkName(channelName) {
+    re_trunk.lastIndex = 0
+    let parseData = re_trunk.exec(channelName)
+    if (parseData) {
+        return {trunk: parseData[2]}
     }
 }
 
@@ -144,7 +153,9 @@ async function addChannel(event, channel_id) {
                 trunk = appInterface.trunkCollection.getByChannelName('SIP/' + event['Exten'])
             }
             if (trunk == null) {
-                trunk = appInterface.trunkCollection.getByChannelName(event['Channel'].split('-')[0])
+                let trunkName = parseTrunkName(event['Channel'])
+                trunk = appInterface.trunkCollection.getByChannelName(trunkName.trunk)
+                //trunk = appInterface.trunkCollection.getByChannelName(event['Channel'].split('-')[0])
             }
             if (trunk) {
                 number = event['CallerIDNum']
@@ -514,6 +525,26 @@ async function queueCallerAbandon(event) {
 
 /* End queues */
 
+/* Restore */
+async function loadChannel (event) {
+    console.log(event)
+    //appInterface.reloadedChannel.push(event['Channel'])
+    let channel = appInterface.channelCollection.getByName(event['Channel'])
+    if (!channel){
+        let channelDBid = await appInterface.channelCollection.get_by_name_in_db(event['Channel'], event['Uniqueid'])
+        if (!channelDBid){
+            await addChannel(event)
+        } else {
+            // Если канал открыл в бд
+            if (appInterface.channelCollection.channel_in_db_is_open(channelDBid)){
+                if (['Down', 'down'].indexOf(event['ChannelStatedesc']) < 0){
+                    await addChannel(event, channelDBid)
+                }
+            }
+        }
+    }
+}
+
 
 function Event (eventName) {
     return 'event' + eventName
@@ -553,7 +584,7 @@ appInterface.emitter.once('CollectionLoaded', function () {
     ami.on(Event('QueueCallerAbandon'), queueCallerAbandon)
 
     // Restore collection
-    ami.on(Event('CoreShowChannel'), function (){})
+    ami.on(Event('CoreShowChannel'), loadChannel)
     ami.on(Event('CoreShowChannelsComplete'), function (){})
     ami.on(Event('BridgeListItem'), function (){})
     ami.on(Event('BridgeInfoChannel'), function (){})
