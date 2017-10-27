@@ -89,7 +89,8 @@ class ChannelCollection{
         let channel_row = await queryOne(
             'SELECT id ' +
             'FROM channels ' +
-            `WHERE channel_name=${name} AND unique_id = ${unique_id}`)
+            `WHERE channel_name=$1 AND unique_id = $2`,
+            [name, unique_id])
         if (channel_row){
             return channel_row.id
         } else {
@@ -350,7 +351,7 @@ class Channel{
             trunk_id = this.trunk.trunk_id
         }
         let createChannel = "INSERT INTO channels (channel_name, unique_id, originate_key, number, incoming, trunk_id, begin) " +
-                    "VALUES ($1, $2, $3, $4, $5, $6, NOW())" +
+                    "VALUES ($1, $2, $3, $4, $5, $6, NOW()) " +
                     "RETURNING id"
         let value = [this.name, this.unique_id, this.originate_key, this.number, this._incoming, trunk_id]
         let result = await queryOne(createChannel, value)

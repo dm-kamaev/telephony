@@ -48,6 +48,7 @@ class AppInterface {
         this.wsc = wsc
         wsc.appInterface = this
         this.emitter.once('CollectionLoaded', ()=> {
+            this.ami.action('CoreShowChannels')
             wsc.open(config.ws.address);
             schedule(this)
         })
@@ -57,7 +58,7 @@ class AppInterface {
 
         // Temp containers for reload
         this.reloadedExtension = []
-
+        this.reloadedChannel = []
     }
 
     router(data){
