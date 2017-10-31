@@ -2,8 +2,6 @@
 const { query, queryOne, backgroundQuery } = require('./db')
 const logicLog = require('./logger')(module, 'logic.log')
 const errorLog = require('./logger')(module, 'error.log')
-const { sendRequest, backgroundTask } = require('./utils')
-const { URL } = require('url')
 const moment = require('moment-timezone')
 
 class RuleCollection {
@@ -160,6 +158,7 @@ class Rule {
         let {id, value, time_group_id, no_answer_rule_id, off_hours_rule_id } = params || {}
         this.id = id || null
         this.value = (value) ? JSON.parse(value) : null
+        this.exec_value = null
         this.timeGroup = null
         this._noAnswerRule = null
         this._offHoursRule = null
@@ -208,12 +207,17 @@ class Rule {
         let result
         if (this.checkTime()){
             logicLog.info(`${agiSession} RULE - CHECK TIME - TRUE`)
-            try {
-                result = await this.do(agiSession)
-            } catch (e) {
-                errorLog.error(`${agiSession} ERROR in RUN RULE ${JSON.stringify(this)}`)
-                errorLog.error(e)
-                return previousResult
+            this.exec_value = this.value
+            while(this.exec_value) {
+                try {
+                    result = await this.do(agiSession)
+                } catch (e) {
+                    errorLog.error(`${agiSession} ERROR in RUN RULE ${JSON.stringify(this)}`)
+                    errorLog.error(e)
+                    return previousResult
+                }
+                logicLog.info(`RULE - COMPLETED - ${JSON.stringify(this.exec_value)} - result ${result}`)
+                this.exec_value = this.exec_value.switch ? this.exec_value.switch[result] : this.exec_value.next;
             }
             logicLog.info(`${agiSession} - RULE - CHECK - result ${result}`)
             if (["ANSWER", "CONTINUE"].indexOf(result) > -1){
@@ -230,66 +234,28 @@ class Rule {
 
     async do(agiSession){
         try {
-            if (this.value['caller_id_name']){
-               await agiSession.agi.asyncCommand(`SET CALLERID ${this.value['caller_id_name']}`)
-            }
-            if (this.value.webhook){
-                backgroundTask(async()=>{
-                    let postData = {"info": {
-                            "rule_run": {"id": this.id, "value": this.value}
-                    }}
-                    if (agiSession.channel) {
-                        postData.info.channel = {
-                            "number": agiSession.channel.number,
-                            "id": await agiSession.channel.id
-                        }
-
-                        if (agiSession.extension) {
-                            postData.info.extension = {"exten": agiSession.channel.extension.exten}
-                        }
-                        if (agiSession.channel.trunk){
-                            postData.info.channel.trunk = {
-                                "name": agiSession.channel.trunk.name,
-                                "id": agiSession.channel.trunk.trunk_id
-                            }
-                        }
-                    }
-                    if (agiSession.processedRules.length > 0){
-                        postData.info.processed_rules = []
-                        for (let runRule of agiSession.processedRules){
-                            postData.info.processed_rules.push({
-                                "id": runRule.id,
-                                "value": runRule.value
-                            })
-                        }
-                    }
-                    const options = new URL(this.value.webhook.url)
-                    const headers = this.value.headers || {}
-                    headers['Content-Type'] = 'application/json'
-                    let connectionParam = {}
-                    connectionParam.headers = headers
-                    connectionParam.method = 'POST'
-                    connectionParam.path = options.pathname
-                    connectionParam.hostname = options.hostname
-                    connectionParam.protocol = options.protocol
-
-                    await sendRequest(connectionParam, JSON.stringify(postData))
-                })
+            if (this.exec_value['caller_id_name']){
+               await agiSession.agi.asyncCommand(`SET CALLERID ${this.exec_value['caller_id_name']}`)
             }
         } catch (e){
             errorLog.error(e)
         }
-        switch (this.value.command){
+
+        switch (this.exec_value.command){
             case 'dial':
-                if (this.value.params && this.value.params.force){
-                    let {trunk: asterTrunkStr, number, timeout, music_class} = this.value.params
+                if (this.exec_value.params && this.exec_value.params.force){
+                    let {trunk: asterTrunkStr, number, timeout, music_class} = this.exec_value.params
                     return await agiSession.call({asterTrunkStr, number, timeout, music_class})
                 }
-                return await agiSession.dial(this.value.params)
+                return await agiSession.dial(this.exec_value.params)
             case 'queue':
-                return await agiSession.queue(this.value.params)
+                return await agiSession.queue(this.exec_value.params)
             case 'playback':
-                return await agiSession.playback(this.value.params)
+                return await agiSession.playback(this.exec_value.params)
+            case 'menu':
+                return await agiSession.menu(this.exec_value.params)
+            case 'webhook':
+                return await agiSession.webhook(this.exec_value.params, this.exec_value.switch, {'id': this.id, 'value': this.exec_value})
             default:
                 logicLog.error(`Unknown type command in rule ${JSON.stringify(this)}`)
                 throw new Error('Unknown type command in rule')

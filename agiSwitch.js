@@ -2,6 +2,8 @@
 const logicLog = require('./logger')(module, 'logic.log')
 const errorLog = require('./logger')(module, 'error.log')
 const { backgroundQuery } = require('./db')
+const { sendRequest, backgroundTask } = require('./utils')
+const { URL } = require('url')
 const { appInterface } = require('./ami')
 
 const TIMEOUT = 300
@@ -16,6 +18,12 @@ const completionActionDict = {
     'AFK': [async (agiSession)=> await agiSession.agi.asyncCommand('EXEC Playback "/var/lib/asterisk/moh/messages/DND"')],
     'BUSY_CHAN_1': [async (agiSession)=> await agiSession.agi.asyncCommand('EXEC Playback "/var/lib/asterisk/moh/messages/BUSY"')],
     'BUSY_CHAN_2': [async (agiSession)=> await agiSession.agi.asyncCommand('EXEC Playback "/var/lib/asterisk/moh/messages/BUSY"')],
+    'WEBHOOK_FAILURE': null,
+    'WEBHOOK_WRONG_RESPONSE': null,
+    'WEBHOOK_SENT': null,
+    'MENU_FAILURE': null,
+    'MENU_TIMEOUT': null,
+    'MENU_HANGUP': null,
     // Dial status Asterisk
     // TODO CHECK CHANUNAVAIL ?
     'CHANUNAVAIL': [async (agiSession)=> await agiSession.agi.asyncCommand('EXEC Playback "/var/lib/asterisk/moh/messages/CHANUNAVAIL"')],
@@ -83,6 +91,12 @@ class AgiSession {
                 BUSY_CHAN_2 - Агент занят, разговаривает по 1 линии (Для НЕ привилигерованных звонков)
                 PLAYBACK_SUCCESS - Успешно проигралась запись - rule command 'playback'.
                 PLAYBACK_FAILURE - Не успешно проигралась запись - rule command 'playback'.
+                WEBHOOK_FAILURE - Нужен был ответ от сервера 1С, но ответ не был получен.
+                WEBHOOK_WRONG_RESPONSE - Ответ от сервера 1С был получен в неизвестном формате.
+                WEBHOOK_SENT - Webhook отправлен без ожидания ответа.
+                MENU_FAILURE - Ответ от астериска не пришел.
+                MENU_TIMEOUT - Не нажато нужное количество клавиш за таймаут.
+                MENU_HANGUP - Звонок был сброшен.
             Asterisk Dial Status:
                 CHANUNAVAIL - канал недоступен
                 CONGESTION - Канал возвратил сигнал перегрузки, обычно свидетельствующий о невозможности завершить соединение.
@@ -125,6 +139,92 @@ class AgiSession {
         let result = await this.agi.asyncCommand(`GET DATA "/var/lib/asterisk/moh/gudok" ${timeout} ${maxDigits}`)
         if (result && result['1'] && result['1'].toString().length == 3){
             this.exten = result['1'].toString()
+        }
+    }
+
+    async webhook(params, wait, rule_run) {
+        const sendWebhook = async()=>{
+            let postData = {'info': {}}
+            if(rule_run) {
+                postData.info['rule_run'] = rule_run
+            }
+            if (this.channel) {
+                postData.info.channel = {
+                    'number': this.channel.number,
+                    'id': await this.channel.id
+                }
+
+                if (this.extension) {
+                    postData.info.extension = {'exten': this.channel.extension.exten}
+                }
+                if (this.channel.trunk){
+                    postData.info.channel.trunk = {
+                        'name': this.channel.trunk.name,
+                        'id': this.channel.trunk.trunk_id
+                    }
+                }
+            }
+            if (this.processedRules.length > 0){
+                postData.info.processed_rules = []
+                for (let runRule of this.processedRules){
+                    postData.info.processed_rules.push({
+                        'id': runRule.id,
+                        'value': runRule.value
+                    })
+                }
+            }
+            const options = new URL(params.url)
+            const headers = params.headers || {}
+            headers['Content-Type'] = 'application/json'
+            let connectionParam = {}
+            connectionParam.headers = headers
+            connectionParam.method = 'POST'
+            connectionParam.path = options.pathname
+            connectionParam.hostname = options.hostname
+            connectionParam.protocol = options.protocol
+
+            return await sendRequest(connectionParam, JSON.stringify(postData))
+        }
+        if(wait) {
+            let response
+            try {
+                response = await sendWebhook()
+            } catch(e) {
+                errorLog.error(e)
+            }
+            if(!response) {
+                return 'WEBHOOK_FAILURE'
+            }
+            let response_result
+            try {
+                response_result = JSON.parse(response).result
+            } catch(e) {
+                errorLog.error(e)
+            }
+            if(!response_result) {
+                return 'WEBHOOK_WRONG_RESPONSE'
+            }
+            return response_result
+        }
+        else {
+            backgroundTask([sendWebhook])
+            return 'WEBHOOK_SENT'
+        }
+    }
+
+    async menu(params){
+        let {file, timeout = TIMEOUT} = params
+        const maxDigits = 1
+        let result = await this.agi.asyncCommand(`GET DATA "${file}" ${timeout} ${maxDigits}`)
+        if(!result) {
+            return 'MENU_FAILURE'
+        }
+        if (!result['1'] || result['1'].toString().length < maxDigits){
+            return 'MENU_TIMEOUT'
+        } else if(result['1'] == -1) {
+            return 'MENU_HANGUP'
+        } else {
+            return result['1']
         }
     }
 
