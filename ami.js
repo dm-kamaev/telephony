@@ -24,9 +24,9 @@ appInterface.reloadMainSettings()
 ami.appInterface = appInterface
 
 
-const re_number = /^(PJ)?SIP\/((:?[^\/]+)\/)?(:?\w+)/g
-const re_voxlink = /^(:?IAX2\/voxlink)-/g
-const re_trunk = /^(:?PJ)?(SIP\/.+)-[^-]+/g
+const re_number = /^(?:PJ)?SIP\/(?:([^\/]+)\/)?(\w+)/g
+const re_voxlink = /^(IAX2\/voxlink)-/g
+const re_trunk = /^(?:PJ)?(SIP\/.+)-[^-]+/g
 
 function getUniqueTempID(event) {
     let linkedID = event['Linkedid']
@@ -41,7 +41,7 @@ function parseChannelName(channelName) {
     re_number.lastIndex = 0
     let parseData = re_number.exec(channelName)
     if (parseData){
-        return {number: parseData[4], trunk: parseData[3]}
+        return {number: parseData[2], trunk: parseData[1]}
     }
 }
 
@@ -59,7 +59,7 @@ function parseTrunkName(channelName) {
     re_trunk.lastIndex = 0
     let parseData = re_trunk.exec(channelName)
     if (parseData) {
-        return {trunk: parseData[2]}
+        return {trunk: parseData[1]}
     }
 }
 
