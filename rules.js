@@ -217,7 +217,7 @@ class Rule {
                     return previousResult
                 }
                 logicLog.info(`RULE - COMPLETED - ${JSON.stringify(this.exec_value)} - result ${result}`)
-                this.exec_value = this.exec_value.switch ? this.exec_value.switch[result] : this.exec_value.next;
+                this.exec_value = this.exec_value.switch ? this.exec_value.switch[result] || this.exec_value.switch['default']: this.exec_value.next;
             }
             logicLog.info(`${agiSession} - RULE - CHECK - result ${result}`)
             if (["ANSWER", "CONTINUE"].indexOf(result) > -1){
