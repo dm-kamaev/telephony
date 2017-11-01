@@ -215,7 +215,7 @@ class AgiSession {
     async menu(params){
         let {file, timeout = TIMEOUT} = params
         const maxDigits = 1
-        let result = await this.agi.asyncCommand(`GET DATA "${file}" ${timeout} ${maxDigits}`)
+        let result = await this.agi.asyncCommand(`GET DATA "${file}" ${timeout*1000} ${maxDigits}`)
         if(!result) {
             return 'MENU_FAILURE'
         }
