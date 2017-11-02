@@ -132,7 +132,7 @@ class AppInterface {
 
     sendMessage(msg, recipients, requestId=null){
         recipients.push(this._clientFlag)
-        recipients.push(this._serverFlag)
+        //recipients.push(this._serverFlag)
         let message = {
             "Type": "Request",
             "Name": "SendMessage",
