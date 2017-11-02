@@ -18,11 +18,12 @@ const completionActionDict = {
     'AFK': [async (agiSession)=> await agiSession.agi.asyncCommand('EXEC Playback "/var/lib/asterisk/moh/messages/DND"')],
     'BUSY_CHAN_1': [async (agiSession)=> await agiSession.agi.asyncCommand('EXEC Playback "/var/lib/asterisk/moh/messages/BUSY"')],
     'BUSY_CHAN_2': [async (agiSession)=> await agiSession.agi.asyncCommand('EXEC Playback "/var/lib/asterisk/moh/messages/BUSY"')],
-    'WEBHOOK_FAILURE': null,
-    'WEBHOOK_WRONG_RESPONSE': null,
+    'WEBHOOK_FAILURE': [(agiSession) => logicLog.error(`${agiSession} STATUS WEBHOOK_FAILURE}`)],
+    'WEBHOOK_WRONG_RESPONSE': [(agiSession) => logicLog.error(`${agiSession} STATUS WEBHOOK_WRONG_RESPONSE}`)],
     'WEBHOOK_SENT': null,
-    'MENU_FAILURE': null,
-    'MENU_TIMEOUT': null,
+    'MENU_FAILURE': [(agiSession) => logicLog.error(`${agiSession} STATUS MENU_FAILURE}`)],
+    'MENU_TIMEOUT': [async (agiSession)=> await agiSession.agi.asyncCommand('EXEC Playback "/var/lib/asterisk/moh/messages/TIMEOUT"'),
+        (agiSession) => logicLog.error(`${agiSession} STATUS MENU_TIMEOUT}`)],
     'MENU_HANGUP': null,
     // Dial status Asterisk
     // TODO CHECK CHANUNAVAIL ?
