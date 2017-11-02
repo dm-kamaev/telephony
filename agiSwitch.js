@@ -225,7 +225,7 @@ class AgiSession {
         } else if(result['1'] == -1) {
             return 'MENU_HANGUP'
         } else {
-            return result['1']
+            return result['1'].toString()
         }
     }
 
