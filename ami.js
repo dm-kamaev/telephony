@@ -89,7 +89,7 @@ async function extensionStateList() {
             }
 
             ami.removeListener(Event("ExtensionStatus"), addExtensionStatus)
-            ami.removeListener(Event("ExtensionStatus"), extractValues)
+            ami.removeListener(Event("ExtensionStateListComplete"), extractValues)
             await loadExtensions(values)
         } catch (e) {
             errorLog.error(e)
