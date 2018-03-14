@@ -240,7 +240,6 @@ class AgiSession {
 
     async queue(params){
         let {name, timeout = TIMEOUT} = params
-        await this.agi.asyncCommand('SET VARIABLE QUEUESTATUS')
         await this.agi.asyncCommand(`EXEC Queue ${name},c,,,${timeout}`)
         let status = await this.agi.asyncCommand('GET VARIABLE QUEUESTATUS')
         return status['2']
