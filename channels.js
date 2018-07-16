@@ -142,7 +142,9 @@ class Channel{
             this.call_number = getStandardPhone(exten)
         }
 
+        console.log('CHANNELS.JS: trunk', trunk);
         if (this.trunk){
+            console.log('CHANNELS.JS: this.trunk.tracking && !this.incoming', this.trunk.tracking, !this.incoming);
             if (this.trunk.tracking && !this.incoming){
                 if (['74959843131', '79255343606', '79161387884'].indexOf(this.number) < 0 ){
                     let connectParam = {
@@ -156,6 +158,10 @@ class Channel{
                             'Content-Type': 'application/json'
                         }
                     }
+                    console.log('CHANNELS.JS: connectParam', connectParam, {
+                                "phone": this.call_number,
+                                "channel": await this.id
+                        });
                     backgroundTask([
                         async ()=> sendRequest(connectParam, JSON.stringify({
                                 "phone": this.call_number,

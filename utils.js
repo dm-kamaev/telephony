@@ -42,12 +42,14 @@ function sendRequest (connectParam, body) {
     }
     let response = ''
     return new Promise((reslove, reject) => {
+        console.log('CHANNELS.JS: connectParam', connectParam, body);
         let req = protocol.request(connectParam, (res) => {
             res.setEncoding('utf8')
             res.on('data', (chunk) => {
                 response += chunk
             });
             res.on('end', () => {
+                console.log('CHANNELS.JS end', response);
                 reslove(response);
             });
         })
@@ -55,6 +57,7 @@ function sendRequest (connectParam, body) {
             reject(new Error(`Request timeout error - ${connectParam}`))
         })
         req.on('error', (e) => {
+            console.log('CHANNELS.JS error', e);
             reject(new Error(`The request ended in failure - ${connectParam}`))
         })
         if (connectParam.method == 'POST') {
